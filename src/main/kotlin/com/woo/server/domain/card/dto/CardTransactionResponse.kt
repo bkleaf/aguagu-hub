@@ -34,16 +34,19 @@ data class CardTransactionResponse(
     @Schema(description = "누적 사용 금액 (원)", example = "773774")
     val accumulatedAmount: BigDecimal?,
     @Schema(description = "생성 일시", example = "2025-01-15T17:52:30")
-    val createdAt: LocalDateTime
+    val createdAt: LocalDateTime,
+    @Schema(description = "태그 목록")
+    val tags: List<TagResponse> = emptyList()
 ) {
     companion object {
         /**
          * Entity를 Response DTO로 변환
          *
          * @param entity CardTransaction 엔티티
+         * @param tags 태그 목록 (기본값: 빈 리스트)
          * @return CardTransactionResponse DTO
          */
-        fun from(entity: CardTransaction): CardTransactionResponse {
+        fun from(entity: CardTransaction, tags: List<TagResponse> = emptyList()): CardTransactionResponse {
             return CardTransactionResponse(
                 id = entity.id!!,
                 phoneNumber = entity.phoneNumber,
@@ -54,7 +57,8 @@ data class CardTransactionResponse(
                 transactionDate = entity.transactionDate,
                 merchantName = entity.merchantName,
                 accumulatedAmount = entity.accumulatedAmount,
-                createdAt = entity.createdAt
+                createdAt = entity.createdAt,
+                tags = tags
             )
         }
     }

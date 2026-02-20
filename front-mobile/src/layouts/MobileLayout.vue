@@ -55,6 +55,7 @@ const navMap = {
   more: 'more',
   creditCards: 'more',
   autoPayments: 'more',
+  tags: 'more',
 }
 
 watch(() => route.name, (name) => {

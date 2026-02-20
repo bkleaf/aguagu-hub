@@ -39,5 +39,6 @@ const navItems = [
   { to: '/credit-cards', icon: 'mdi-card-account-details', title: '신용카드 관리' },
   { to: '/limits', icon: 'mdi-chart-bar', title: '카드 한도 관리' },
   { to: '/auto-payments', icon: 'mdi-refresh-auto', title: '자동결제 관리' },
+  { to: '/tags', icon: 'mdi-tag-multiple', title: '태그 관리' },
 ]
 </script>

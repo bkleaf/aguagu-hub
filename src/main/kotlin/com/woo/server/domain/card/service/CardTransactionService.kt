@@ -5,11 +5,13 @@ import com.woo.server.domain.card.dto.CardMessageProcessResponse
 import com.woo.server.domain.card.dto.CardMonthlyBillProcessResponse
 import com.woo.server.domain.card.dto.CardParseFailureResponse
 import com.woo.server.domain.card.dto.CardTransactionResponse
+import com.woo.server.domain.card.dto.TagResponse
 import com.woo.server.domain.card.entity.CardParseFailure
 import com.woo.server.domain.card.entity.CardTransaction
 import com.woo.server.domain.card.parser.CardParserFactory
 import com.woo.server.domain.card.repository.CardParseFailureRepository
 import com.woo.server.domain.card.repository.CardTransactionRepository
+import com.woo.server.domain.card.repository.TransactionTagRepository
 import com.woo.server.common.notification.TelegramNotificationService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -30,7 +32,8 @@ class CardTransactionService(
     private val telegramNotificationService: TelegramNotificationService,
     private val cardLimitService: CardLimitService,
     private val creditCardService: CreditCardService,
-    private val cardMonthlyBillService: CardMonthlyBillService
+    private val cardMonthlyBillService: CardMonthlyBillService,
+    private val transactionTagRepository: TransactionTagRepository
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -133,16 +136,23 @@ class CardTransactionService(
         return CardMessageProcessResponse.success(CardTransactionResponse.from(saved))
     }
 
-    /** 모든 거래 내역을 조회합니다. */
+    /** 모든 거래 내역을 조회합니다 (태그 포함). */
     fun getAllTransactions(): List<CardTransactionResponse> {
-        return cardTransactionRepository.findAllByOrderByCreatedAtDesc()
-            .map { CardTransactionResponse.from(it) }
+        val transactions = cardTransactionRepository.findAllByOrderByCreatedAtDesc()
+        val tagMap = getTagMapForTransactions(transactions)
+        return transactions.map { tx ->
+            CardTransactionResponse.from(tx, tagMap[tx.id] ?: emptyList())
+        }
     }
 
-    /** 특정 거래 내역을 조회합니다. */
+    /** 특정 거래 내역을 조회합니다 (태그 포함). */
     fun getTransaction(id: Long): CardTransactionResponse? {
         return cardTransactionRepository.findById(id)
-            .map { CardTransactionResponse.from(it) }
+            .map { tx ->
+                val tags = transactionTagRepository.findByTransactionIdWithTag(tx.id!!)
+                    .map { TagResponse.from(it.tag) }
+                CardTransactionResponse.from(tx, tags)
+            }
             .orElse(null)
     }
 
@@ -152,20 +162,38 @@ class CardTransactionService(
             .map { CardParseFailureResponse.from(it) }
     }
 
-    /** 거래 내역을 거래일시 기준 최근순으로 조회합니다. */
+    /** 거래 내역을 거래일시 기준 최근순으로 조회합니다 (태그 포함). */
     fun getTransactionsByDate(): List<CardTransactionResponse> {
-        return cardTransactionRepository.findAllByOrderByTransactionDateDesc()
-            .map { CardTransactionResponse.from(it) }
+        val transactions = cardTransactionRepository.findAllByOrderByTransactionDateDesc()
+        val tagMap = getTagMapForTransactions(transactions)
+        return transactions.map { tx ->
+            CardTransactionResponse.from(tx, tagMap[tx.id] ?: emptyList())
+        }
     }
 
-    /** 카드사별 거래 내역을 조회합니다. */
+    /** 카드사별 거래 내역을 조회합니다 (태그 포함). */
     fun getTransactionsByCardCompany(cardCompany: CardCompany): List<CardTransactionResponse> {
-        return cardTransactionRepository.findByCardCompany(cardCompany)
-            .map { CardTransactionResponse.from(it) }
+        val transactions = cardTransactionRepository.findByCardCompany(cardCompany)
+        val tagMap = getTagMapForTransactions(transactions)
+        return transactions.map { tx ->
+            CardTransactionResponse.from(tx, tagMap[tx.id] ?: emptyList())
+        }
     }
 
     /** 현재 지원하는 카드사 목록을 조회합니다. */
     fun getSupportedCardCompanies(): List<CardCompany> {
         return cardParserFactory.getSupportedCardCompanies()
+    }
+
+    /**
+     * 거래 목록에 대한 태그 맵을 일괄 조회합니다 (N+1 방지).
+     * 거래 ID → 태그 응답 리스트 맵을 반환합니다.
+     */
+    private fun getTagMapForTransactions(transactions: List<CardTransaction>): Map<Long?, List<TagResponse>> {
+        val transactionIds = transactions.mapNotNull { it.id }
+        if (transactionIds.isEmpty()) return emptyMap()
+        return transactionTagRepository.findByTransactionIdInWithTag(transactionIds)
+            .groupBy { it.transaction.id }
+            .mapValues { (_, tags) -> tags.map { TagResponse.from(it.tag) } }
     }
 }

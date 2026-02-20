@@ -43,3 +43,12 @@ export const fetchAutoPaymentsByCard = (creditCardId) => api.get(`/auto-payments
 export const createAutoPayment = (data) => api.post('/auto-payments', data)
 export const updateAutoPayment = (id, data) => api.put(`/auto-payments/${id}`, data)
 export const deleteAutoPayment = (id) => api.delete(`/auto-payments/${id}`)
+
+// 태그 API
+export const fetchTags = () => api.get('/tags')
+export const createTag = (data) => api.post('/tags', data)
+export const updateTag = (id, data) => api.put(`/tags/${id}`, data)
+export const deleteTag = (id) => api.delete(`/tags/${id}`)
+export const fetchTransactionTags = (transactionId) => api.get(`/tags/transactions/${transactionId}/tags`)
+export const addTagToTransaction = (transactionId, tagId) => api.post(`/tags/transactions/${transactionId}/tags`, { tagId })
+export const removeTagFromTransaction = (transactionId, tagId) => api.delete(`/tags/transactions/${transactionId}/tags/${tagId}`)

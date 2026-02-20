@@ -35,6 +35,18 @@
             <div style="min-width: 0; flex: 1">
               <div class="text-body-2 font-weight-medium text-truncate">{{ tx.merchantName || '사용처 없음' }}</div>
               <div class="text-caption text-grey">{{ tx.cardCompanyName }} &middot; {{ formatDate(tx.transactionDate) }}</div>
+              <div v-if="tx.tags && tx.tags.length > 0" class="mt-1">
+                <v-chip
+                  v-for="tag in tx.tags"
+                  :key="tag.id"
+                  :color="tag.color"
+                  size="x-small"
+                  variant="flat"
+                  class="text-white mr-1"
+                >
+                  {{ tag.name }}
+                </v-chip>
+              </div>
             </div>
             <div class="text-body-1 font-weight-bold ml-2 text-no-wrap">{{ formatAmount(tx.amount) }}</div>
           </div>
@@ -84,6 +96,36 @@
             <v-list-item title="누적금액" :subtitle="selectedTransaction.accumulatedAmount ? formatAmount(selectedTransaction.accumulatedAmount) : '-'" />
             <v-list-item title="전화번호" :subtitle="selectedTransaction.phoneNumber || '-'" />
           </v-list>
+
+          <!-- 태그 할당/해제 -->
+          <v-divider class="my-3" />
+          <div class="text-subtitle-2 mb-2">태그</div>
+          <div class="d-flex flex-wrap ga-1 mb-3">
+            <v-chip
+              v-for="tag in selectedTransaction.tags"
+              :key="tag.id"
+              :color="tag.color"
+              size="small"
+              variant="flat"
+              class="text-white"
+              closable
+              @click:close="removeTag(selectedTransaction.id, tag.id)"
+            >
+              {{ tag.name }}
+            </v-chip>
+            <span v-if="!selectedTransaction.tags || selectedTransaction.tags.length === 0" class="text-grey text-body-2">
+              태그 없음
+            </span>
+          </div>
+          <v-select
+            v-model="tagToAdd"
+            :items="availableTagsForSelected"
+            label="태그 추가"
+            density="compact"
+            hide-details
+            clearable
+            @update:model-value="addTag"
+          />
         </v-card-text>
       </v-card>
     </v-dialog>
@@ -108,13 +150,20 @@
         </v-card-text>
       </v-card>
     </v-dialog>
+
+    <v-snackbar v-model="snackbar.show" :color="snackbar.color" timeout="3000">
+      {{ snackbar.text }}
+    </v-snackbar>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { fetchTransactions, fetchParseFailures, fetchCreditCards } from '../api'
+import {
+  fetchTransactions, fetchParseFailures, fetchCreditCards,
+  fetchTags, addTagToTransaction, removeTagFromTransaction
+} from '../api'
 
 const route = useRoute()
 
@@ -124,10 +173,13 @@ const loading = ref(false)
 const transactions = ref([])
 const failures = ref([])
 const creditCards = ref([])
+const allTags = ref([])
 const transactionDialog = ref(false)
 const failureDialog = ref(false)
 const selectedTransaction = ref(null)
 const selectedFailure = ref(null)
+const tagToAdd = ref(null)
+const snackbar = ref({ show: false, text: '', color: '' })
 
 /** 등록된 카드 기반 필터 항목 (카드사명 + 끝4자리) */
 const cardItems = computed(() =>
@@ -147,6 +199,15 @@ const filteredTransactions = computed(() => {
   )
 })
 
+/** 선택된 거래에 아직 할당되지 않은 태그 */
+const availableTagsForSelected = computed(() => {
+  if (!selectedTransaction.value) return []
+  const assignedIds = (selectedTransaction.value.tags || []).map(t => t.id)
+  return allTags.value
+    .filter(t => !assignedIds.includes(t.id))
+    .map(t => ({ title: t.name, value: t.id }))
+})
+
 /** 금액 포맷 */
 const formatAmount = (v) => Number(v).toLocaleString('ko-KR') + '원'
 /** 날짜 포맷 */
@@ -162,6 +223,36 @@ function openTransactionDetail(tx) {
 function openFailureDetail(f) {
   selectedFailure.value = f
   failureDialog.value = true
+}
+
+/** 거래에 태그 추가 */
+async function addTag(tagId) {
+  if (!tagId || !selectedTransaction.value) return
+  try {
+    await addTagToTransaction(selectedTransaction.value.id, tagId)
+    const tag = allTags.value.find(t => t.id === tagId)
+    if (tag) {
+      if (!selectedTransaction.value.tags) selectedTransaction.value.tags = []
+      selectedTransaction.value.tags.push(tag)
+    }
+    tagToAdd.value = null
+    snackbar.value = { show: true, text: '태그 할당 완료', color: 'green' }
+  } catch (e) {
+    snackbar.value = { show: true, text: '태그 할당 실패: ' + (e.response?.data?.message || e.message), color: 'red' }
+  }
+}
+
+/** 거래에서 태그 제거 */
+async function removeTag(transactionId, tagId) {
+  try {
+    await removeTagFromTransaction(transactionId, tagId)
+    if (selectedTransaction.value) {
+      selectedTransaction.value.tags = selectedTransaction.value.tags.filter(t => t.id !== tagId)
+    }
+    snackbar.value = { show: true, text: '태그 해제 완료', color: 'green' }
+  } catch (e) {
+    snackbar.value = { show: true, text: '태그 해제 실패', color: 'red' }
+  }
 }
 
 /** 거래 목록 로드 */
@@ -200,10 +291,13 @@ async function load() {
 }
 
 onMounted(async () => {
-  const res = await fetchCreditCards()
-  creditCards.value = res.data
+  const [cardsRes, tagsRes] = await Promise.all([
+    fetchCreditCards(),
+    fetchTags()
+  ])
+  creditCards.value = cardsRes.data
+  allTags.value = tagsRes.data
 
-  // 쿼리 파라미터로 초기 탭/필터 설정
   if (route.query.tab === 'failures') {
     tab.value = 'failures'
   }

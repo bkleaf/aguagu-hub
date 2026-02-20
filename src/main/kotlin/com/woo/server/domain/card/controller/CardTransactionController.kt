@@ -22,7 +22,7 @@ class CardTransactionController(
 
     @Operation(summary = "카드 결제 문자 등록", description = "카드 결제 문자 메시지를 파싱하여 거래 정보를 추출하고 DB에 저장합니다.")
     @PostMapping
-    fun receiveCardMeansssage(
+    fun receiveCardMessage(
         @Valid @RequestBody request: CardMessageRequest
     ): ResponseEntity<CardMessageProcessResponse> {
         val result = cardTransactionService.processCardMessage(request.phoneNumber, request.message)

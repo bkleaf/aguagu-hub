@@ -1,0 +1,72 @@
+### 태그 생성 - 식비
+POST {{host}}/api/v1/card/tags
+Content-Type: application/json
+
+{
+  "name": "식비",
+  "color": "#4CAF50"
+}
+
+### 태그 생성 - 교통비
+POST {{host}}/api/v1/card/tags
+Content-Type: application/json
+
+{
+  "name": "교통비",
+  "color": "#2196F3"
+}
+
+### 태그 생성 - 쇼핑
+POST {{host}}/api/v1/card/tags
+Content-Type: application/json
+
+{
+  "name": "쇼핑",
+  "color": "#FF9800"
+}
+
+### 태그 생성 - 고정비
+POST {{host}}/api/v1/card/tags
+Content-Type: application/json
+
+{
+  "name": "고정비",
+  "color": "#9C27B0"
+}
+
+### 전체 태그 조회
+GET {{host}}/api/v1/card/tags
+
+### 태그 수정 (ID=1)
+PUT {{host}}/api/v1/card/tags/1
+Content-Type: application/json
+
+{
+  "name": "식비/카페",
+  "color": "#66BB6A"
+}
+
+### 태그 삭제 (ID=1)
+DELETE {{host}}/api/v1/card/tags/1
+
+### 거래에 태그 할당 (거래 ID=1, 태그 ID=1)
+POST {{host}}/api/v1/card/tags/transactions/1/tags
+Content-Type: application/json
+
+{
+  "tagId": 1
+}
+
+### 거래에 태그 할당 (거래 ID=1, 태그 ID=2)
+POST {{host}}/api/v1/card/tags/transactions/1/tags
+Content-Type: application/json
+
+{
+  "tagId": 2
+}
+
+### 거래의 태그 목록 조회 (거래 ID=1)
+GET {{host}}/api/v1/card/tags/transactions/1/tags
+
+### 거래에서 태그 해제 (거래 ID=1, 태그 ID=2)
+DELETE {{host}}/api/v1/card/tags/transactions/1/tags/2

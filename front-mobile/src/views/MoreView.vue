@@ -29,6 +29,19 @@
       <v-divider />
 
       <v-list-item
+        prepend-icon="mdi-tag-multiple"
+        title="태그 관리"
+        subtitle="거래 분류 태그 등록, 수정, 삭제"
+        @click="$router.push('/tags')"
+      >
+        <template #append>
+          <v-icon>mdi-chevron-right</v-icon>
+        </template>
+      </v-list-item>
+
+      <v-divider />
+
+      <v-list-item
         prepend-icon="mdi-credit-card"
         title="카드 관리"
         subtitle="신용카드 등록, 조회, 삭제"

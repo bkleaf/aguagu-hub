@@ -6,6 +6,7 @@ import LimitListView from '../views/LimitListView.vue'
 import CreditCardListView from '../views/CreditCardListView.vue'
 import MonthlyBillListView from '../views/MonthlyBillListView.vue'
 import AutoPaymentListView from '../views/AutoPaymentListView.vue'
+import TagListView from '../views/TagListView.vue'
 
 const routes = [
   { path: '/', name: 'dashboard', component: DashboardView, meta: { title: '대시보드' } },
@@ -15,6 +16,7 @@ const routes = [
   { path: '/credit-cards', name: 'creditCards', component: CreditCardListView, meta: { title: '신용카드 관리' } },
   { path: '/limits', name: 'limits', component: LimitListView, meta: { title: '카드 한도 관리' } },
   { path: '/auto-payments', name: 'autoPayments', component: AutoPaymentListView, meta: { title: '자동결제 관리' } },
+  { path: '/tags', name: 'tags', component: TagListView, meta: { title: '태그 관리' } },
 ]
 
 const router = createRouter({
