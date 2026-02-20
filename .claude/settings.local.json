@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(dir:*)",
+      "Bash(powershell -Command \"Get-ChildItem -Recurse | Select-Object -ExpandProperty FullName | head -100\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path ''src'' -Recurse -Include ''*.kt'' | ForEach-Object { $_FullName }\")",
+      "Bash(./gradlew build:*)",
+      "WebSearch",
+      "Bash(timeout 30 ./gradlew:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(./gradlew dependencies:*)",
+      "Bash(xargs:*)",
+      "Bash(npm install)",
+      "Bash(npx vite build)",
+      "Bash(./gradlew compileKotlin:*)",
+      "Bash(npm run build:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(netsh interface ipv4 show excludedportrange:*)",
+      "Bash(./gradlew bootRun:*)"
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+### 자동결제 등록 - 넷플릭스 (삼성카드 4300)
+POST {{host}}/api/v1/card/auto-payments
+Content-Type: application/json
+
+{
+  "creditCardId": "SAMSUNG_4300",
+  "description": "넷플릭스",
+  "amount": 17000,
+  "paymentDay": 15,
+  "active": true
+}
+
+### 자동결제 등록 - SKT 통신비 (하나카드 7921)
+POST {{host}}/api/v1/card/auto-payments
+Content-Type: application/json
+
+{
+  "creditCardId": "HANA_7921",
+  "description": "SKT 통신비",
+  "amount": 65000,
+  "paymentDay": 20,
+  "active": true
+}
+
+### 자동결제 등록 - 보험료 (삼성카드 4300)
+POST {{host}}/api/v1/card/auto-payments
+Content-Type: application/json
+
+{
+  "creditCardId": "SAMSUNG_4300",
+  "description": "자동차 보험료",
+  "amount": 120000,
+  "paymentDay": 5,
+  "active": true
+}
+
+### 전체 자동결제 조회
+GET {{host}}/api/v1/card/auto-payments
+
+### 단건 자동결제 조회 (ID=1)
+GET {{host}}/api/v1/card/auto-payments/1
+
+### 신용카드별 자동결제 조회 (삼성카드 4300)
+GET {{host}}/api/v1/card/auto-payments/by-card/SAMSUNG_4300
+
+### 자동결제 수정 (ID=1)
+PUT {{host}}/api/v1/card/auto-payments/1
+Content-Type: application/json
+
+{
+  "creditCardId": "SAMSUNG_4300",
+  "description": "넷플릭스 프리미엄",
+  "amount": 21000,
+  "paymentDay": 15,
+  "active": true
+}
+
+### 자동결제 삭제 (ID=1)
+DELETE {{host}}/api/v1/card/auto-payments/1

@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea
+*.iml
+
+# Build
+build/
+.gradle/
+front/node_modules/
+front/dist/
+
+# Docker
+*.tar
+.env
+
+# Docs
+docs/
+CLAUDE.md
+.claude/
+
+# Rollback
+.rollback/
+
+# Test
+src/test/

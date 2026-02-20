@@ -1,0 +1,59 @@
+### 신용카드 등록 - 삼성카드
+POST {{host}}/api/v1/card/credit-cards
+Content-Type: application/json
+
+{
+  "cardCompany": "SAMSUNG",
+  "lastFourDigits": "4300",
+  "billingStartDay": 1,
+  "billingEndDay": 31,
+  "active": true
+}
+
+### 신용카드 등록 - 하나카드 (정산기간 커스텀)
+POST {{host}}/api/v1/card/credit-cards
+Content-Type: application/json
+
+{
+  "cardCompany": "HANA",
+  "lastFourDigits": "7921",
+  "billingStartDay": 15,
+  "billingEndDay": 14,
+  "active": true
+}
+
+### 신용카드 등록 - KB카드
+POST {{host}}/api/v1/card/credit-cards
+Content-Type: application/json
+
+{
+  "cardCompany": "KB",
+  "lastFourDigits": "4043",
+  "billingStartDay": 1,
+  "billingEndDay": 31,
+  "active": true
+}
+
+### 신용카드 등록 - 사용하지 않는 카드 예시
+POST {{host}}/api/v1/card/credit-cards
+Content-Type: application/json
+
+{
+  "cardCompany": "SAMSUNG",
+  "lastFourDigits": "1234",
+  "billingStartDay": 1,
+  "billingEndDay": 31,
+  "active": false
+}
+
+### 전체 신용카드 조회
+GET {{host}}/api/v1/card/credit-cards
+
+### 단건 신용카드 조회
+GET {{host}}/api/v1/card/credit-cards/SAMSUNG_4300
+
+### 신용카드 삭제
+DELETE {{host}}/api/v1/card/credit-cards/SAMSUNG_4300
+
+### 카드별 사용 현황 요약 조회
+GET {{host}}/api/v1/card/credit-cards/usage-summary

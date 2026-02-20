@@ -1,0 +1,27 @@
+services:
+  aguagu-hub:
+    image: aguagu-hub:latest
+    container_name: aguagu-hub
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      # PostgreSQL
+      DB_URL: ${DB_URL}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Telegram Bot
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      TELEGRAM_ENABLED: ${TELEGRAM_ENABLED:-true}
+      TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL}
+      # JVM 옵션 (NAS 메모리에 맞게 조절)
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx512m}
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/swagger-ui/index.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

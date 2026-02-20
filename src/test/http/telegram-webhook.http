@@ -1,0 +1,44 @@
+### 텔레그램 Webhook - /한도 커맨드 테스트
+POST {{host}}/api/v1/telegram/webhook
+Content-Type: application/json
+
+{
+  "update_id": 123456789,
+  "message": {
+    "message_id": 1,
+    "chat": {
+      "id": -5223049219
+    },
+    "text": "/한도"
+  }
+}
+
+### 텔레그램 Webhook - /카드 커맨드 테스트
+POST {{host}}/api/v1/telegram/webhook
+Content-Type: application/json
+
+{
+  "update_id": 123456790,
+  "message": {
+    "message_id": 2,
+    "chat": {
+      "id": -5223049219
+    },
+    "text": "/카드"
+  }
+}
+
+### 텔레그램 Webhook - /start 커맨드 테스트
+POST {{host}}/api/v1/telegram/webhook
+Content-Type: application/json
+
+{
+  "update_id": 123456791,
+  "message": {
+    "message_id": 3,
+    "chat": {
+      "id": -5223049219
+    },
+    "text": "/start"
+  }
+}

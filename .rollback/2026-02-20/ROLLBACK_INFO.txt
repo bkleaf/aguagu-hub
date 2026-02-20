@@ -1,0 +1,21 @@
+롤백 포인트: 2026-02-20
+생성 시각: 2026-02-20 세션
+설명: 카드별 사용 현황 대시보드, 거래필터 카드별 변경, 대시보드 클릭 네비게이션, 모바일 메뉴 변경
+
+포함 파일:
+- src/main/kotlin/com/woo/server/domain/card/dto/CardUsageSummaryDto.kt (신규)
+- src/main/kotlin/com/woo/server/domain/card/service/CardLimitService.kt (수정: private → internal)
+- src/main/kotlin/com/woo/server/domain/card/service/CardUsageSummaryService.kt (신규)
+- src/main/kotlin/com/woo/server/domain/card/controller/CreditCardController.kt (수정: usage-summary 엔드포인트)
+- src/test/http/credit-cards.http (수정: 테스트 추가)
+- front/src/api/index.js (수정: fetchUsageSummary)
+- front/src/views/DashboardView.vue (수정: 카드별 현황 + 클릭 네비게이션)
+- front/src/views/TransactionListView.vue (수정: 카드별 필터 + 쿼리 파라미터)
+- front-mobile/src/api/index.js (수정: fetchUsageSummary)
+- front-mobile/src/views/DashboardView.vue (수정: 카드별 현황 + 클릭 네비게이션)
+- front-mobile/src/views/TransactionListView.vue (수정: 카드별 필터 + 쿼리 파라미터)
+- front-mobile/src/views/MoreView.vue (수정: 카드 관리 메뉴 추가)
+- front-mobile/src/layouts/MobileLayout.vue (수정: 하단 네비 카드→청구서)
+- front-mobile/src/router/index.js (변경 없음, 참고용 백업)
+- CLAUDE.md (수정)
+- docs/2026-02-20.md (신규)

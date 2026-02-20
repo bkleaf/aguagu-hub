@@ -1,0 +1,41 @@
+### 삼성카드 월별 청구서 등록 (기존 거래 엔드포인트로 자동 라우팅)
+POST {{host}}/api/v1/card/transactions
+Content-Type: application/json
+
+{
+  "phoneNumber": "15888700",
+  "message": "2/25 결제금액 150,000원 (2/10기준)"
+}
+
+### 하나카드 월별 청구서 등록
+POST {{host}}/api/v1/card/transactions
+Content-Type: application/json
+
+{
+  "phoneNumber": "18001428",
+  "message": "2/25결제금액 (2/10기준) 230,500원"
+}
+
+### KB국민카드 월별 청구서 등록
+POST {{host}}/api/v1/card/transactions
+Content-Type: application/json
+
+{
+  "phoneNumber": "18990800",
+  "message": "2/25 카드대금 320,000원 (2/10기준)"
+}
+
+### 월별 청구서 조회 (2026년 2월)
+GET {{host}}/api/v1/card/monthly-bills?year=2026&month=2
+
+### 월별 청구서 조회 - 카드사 필터 (삼성카드)
+GET {{host}}/api/v1/card/monthly-bills?year=2026&month=2&cardCompany=SAMSUNG
+
+### 월별 청구서 조회 - 카드사 필터 (하나카드)
+GET {{host}}/api/v1/card/monthly-bills?year=2026&month=2&cardCompany=HANA
+
+### 월별 청구서 조회 - 카드사 필터 (KB카드)
+GET {{host}}/api/v1/card/monthly-bills?year=2026&month=2&cardCompany=KB
+
+### 전체 청구서 조회
+GET {{host}}/api/v1/card/monthly-bills/all

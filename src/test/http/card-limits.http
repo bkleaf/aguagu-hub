@@ -1,0 +1,50 @@
+### 카드 한도 설정 - 월간 (삼성카드 4300)
+POST {{host}}/api/v1/card/limits
+Content-Type: application/json
+
+{
+  "creditCardId": "SAMSUNG_4300",
+  "limitType": "MONTHLY",
+  "limitAmount": 1000000
+}
+
+### 카드 한도 설정 - 연간 (삼성카드 4300)
+POST {{host}}/api/v1/card/limits
+Content-Type: application/json
+
+{
+  "creditCardId": "SAMSUNG_4300",
+  "limitType": "YEARLY",
+  "limitAmount": 12000000
+}
+
+### 카드 한도 설정 - 커스텀 기간 (하나카드 7921)
+POST {{host}}/api/v1/card/limits
+Content-Type: application/json
+
+{
+  "creditCardId": "HANA_7921",
+  "limitType": "CUSTOM",
+  "limitAmount": 3000000,
+  "customStartDate": "2025-01-01",
+  "customEndDate": "2025-03-31"
+}
+
+### 카드 한도 수정 (기존 카드에 대해 한도 변경 - 월간→연간)
+POST {{host}}/api/v1/card/limits
+Content-Type: application/json
+
+{
+  "creditCardId": "SAMSUNG_4300",
+  "limitType": "YEARLY",
+  "limitAmount": 15000000
+}
+
+### 전체 한도 조회
+GET {{host}}/api/v1/card/limits
+
+### 단건 한도 조회 (ID=1)
+GET {{host}}/api/v1/card/limits/1
+
+### 한도 삭제 (ID=1)
+DELETE {{host}}/api/v1/card/limits/1

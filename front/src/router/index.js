@@ -1,0 +1,25 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import DashboardView from '../views/DashboardView.vue'
+import TransactionListView from '../views/TransactionListView.vue'
+import TransactionCreateView from '../views/TransactionCreateView.vue'
+import LimitListView from '../views/LimitListView.vue'
+import CreditCardListView from '../views/CreditCardListView.vue'
+import MonthlyBillListView from '../views/MonthlyBillListView.vue'
+import AutoPaymentListView from '../views/AutoPaymentListView.vue'
+
+const routes = [
+  { path: '/', name: 'dashboard', component: DashboardView, meta: { title: '대시보드' } },
+  { path: '/transactions', name: 'transactions', component: TransactionListView, meta: { title: '거래 내역' } },
+  { path: '/transactions/new', name: 'transactionCreate', component: TransactionCreateView, meta: { title: '문자 등록' } },
+  { path: '/monthly-bills', name: 'monthlyBills', component: MonthlyBillListView, meta: { title: '월별 청구서' } },
+  { path: '/credit-cards', name: 'creditCards', component: CreditCardListView, meta: { title: '신용카드 관리' } },
+  { path: '/limits', name: 'limits', component: LimitListView, meta: { title: '카드 한도 관리' } },
+  { path: '/auto-payments', name: 'autoPayments', component: AutoPaymentListView, meta: { title: '자동결제 관리' } },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+})
+
+export default router
