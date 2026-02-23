@@ -1,8 +1,10 @@
 package com.woo.server.domain.card.controller
 
+import com.woo.server.domain.card.dto.SetMainTagRequest
 import com.woo.server.domain.card.dto.TagRequest
 import com.woo.server.domain.card.dto.TagResponse
 import com.woo.server.domain.card.dto.TransactionTagRequest
+import com.woo.server.domain.card.dto.TransactionTagResponse
 import com.woo.server.domain.card.service.TagService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*
  * 태그 관리 컨트롤러
  *
  * 태그의 CRUD 및 거래-태그 할당/해제 API를 제공합니다.
+ * 태그 유형(MAIN/DETAIL)에 따라 주요 태그와 세부 태그를 구분하여 관리합니다.
  */
 @Tag(name = "태그", description = "태그 관리 및 거래-태그 할당/해제 API")
 @RestController
@@ -62,15 +65,26 @@ class TagController(
         }
     }
 
-    /** 거래에 태그를 할당합니다. */
-    @Operation(summary = "거래에 태그 할당", description = "거래에 태그를 할당합니다.")
+    /** 거래에 태그를 할당합니다 (tagType: MAIN 또는 DETAIL). */
+    @Operation(summary = "거래에 태그 할당", description = "거래에 태그를 할당합니다. tagType으로 MAIN/DETAIL 구분이 가능합니다.")
     @PostMapping("/transactions/{transactionId}/tags")
     fun addTagToTransaction(
         @PathVariable transactionId: Long,
         @RequestBody request: TransactionTagRequest
-    ): ResponseEntity<TagResponse> {
-        val result = tagService.addTagToTransaction(transactionId, request.tagId)
+    ): ResponseEntity<TransactionTagResponse> {
+        val result = tagService.addTagToTransaction(transactionId, request.tagId, request.tagType)
         return ResponseEntity.status(HttpStatus.CREATED).body(result)
+    }
+
+    /** 거래의 주요 태그를 설정합니다. 기존 MAIN → DETAIL로 변경 후 새 태그를 MAIN으로 설정합니다. */
+    @Operation(summary = "주요 태그 설정", description = "거래의 주요 태그를 설정/변경합니다. 기존 주요 태그는 세부 태그로 전환됩니다.")
+    @PutMapping("/transactions/{transactionId}/main-tag")
+    fun setMainTag(
+        @PathVariable transactionId: Long,
+        @RequestBody request: SetMainTagRequest
+    ): ResponseEntity<TransactionTagResponse> {
+        val result = tagService.setMainTag(transactionId, request.tagId)
+        return ResponseEntity.ok(result)
     }
 
     /** 거래에서 태그를 해제합니다. */
@@ -84,12 +98,12 @@ class TagController(
         return ResponseEntity.noContent().build()
     }
 
-    /** 거래에 할당된 태그 목록을 조회합니다. */
-    @Operation(summary = "거래의 태그 목록 조회")
+    /** 거래에 할당된 태그 목록을 조회합니다 (태그 유형 포함). */
+    @Operation(summary = "거래의 태그 목록 조회", description = "거래에 할당된 태그 목록을 태그 유형(MAIN/DETAIL) 포함하여 조회합니다.")
     @GetMapping("/transactions/{transactionId}/tags")
     fun getTagsByTransaction(
         @PathVariable transactionId: Long
-    ): ResponseEntity<List<TagResponse>> {
+    ): ResponseEntity<List<TransactionTagResponse>> {
         return ResponseEntity.ok(tagService.getTagsByTransactionId(transactionId))
     }
 }

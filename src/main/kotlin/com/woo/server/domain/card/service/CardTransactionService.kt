@@ -5,7 +5,7 @@ import com.woo.server.domain.card.dto.CardMessageProcessResponse
 import com.woo.server.domain.card.dto.CardMonthlyBillProcessResponse
 import com.woo.server.domain.card.dto.CardParseFailureResponse
 import com.woo.server.domain.card.dto.CardTransactionResponse
-import com.woo.server.domain.card.dto.TagResponse
+import com.woo.server.domain.card.dto.TransactionTagResponse
 import com.woo.server.domain.card.entity.CardParseFailure
 import com.woo.server.domain.card.entity.CardTransaction
 import com.woo.server.domain.card.parser.CardParserFactory
@@ -150,7 +150,7 @@ class CardTransactionService(
         return cardTransactionRepository.findById(id)
             .map { tx ->
                 val tags = transactionTagRepository.findByTransactionIdWithTag(tx.id!!)
-                    .map { TagResponse.from(it.tag) }
+                    .map { TransactionTagResponse.from(it) }
                 CardTransactionResponse.from(tx, tags)
             }
             .orElse(null)
@@ -187,13 +187,13 @@ class CardTransactionService(
 
     /**
      * 거래 목록에 대한 태그 맵을 일괄 조회합니다 (N+1 방지).
-     * 거래 ID → 태그 응답 리스트 맵을 반환합니다.
+     * 거래 ID → 태그 응답 리스트 맵을 반환합니다 (태그 유형 포함).
      */
-    private fun getTagMapForTransactions(transactions: List<CardTransaction>): Map<Long?, List<TagResponse>> {
+    private fun getTagMapForTransactions(transactions: List<CardTransaction>): Map<Long?, List<TransactionTagResponse>> {
         val transactionIds = transactions.mapNotNull { it.id }
         if (transactionIds.isEmpty()) return emptyMap()
         return transactionTagRepository.findByTransactionIdInWithTag(transactionIds)
             .groupBy { it.transaction.id }
-            .mapValues { (_, tags) -> tags.map { TagResponse.from(it.tag) } }
+            .mapValues { (_, tags) -> tags.map { TransactionTagResponse.from(it) } }
     }
 }

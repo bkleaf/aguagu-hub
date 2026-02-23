@@ -1,5 +1,6 @@
 package com.woo.server.domain.card.entity
 
+import com.woo.server.common.enums.TagType
 import jakarta.persistence.*
 import java.time.LocalDateTime
 
@@ -8,6 +9,7 @@ import java.time.LocalDateTime
  *
  * 카드 거래와 태그의 다대다 관계를 매핑합니다.
  * 하나의 거래에 여러 태그를, 하나의 태그를 여러 거래에 부여할 수 있습니다.
+ * 태그 유형(MAIN/DETAIL)으로 주요 태그와 세부 태그를 구분합니다.
  */
 @Entity
 @Table(
@@ -35,6 +37,11 @@ class TransactionTag(
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tag_id", nullable = false)
     val tag: Tag,
+
+    /** 태그 유형 (MAIN: 주요, DETAIL: 세부) */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tag_type", nullable = false, length = 10)
+    var tagType: TagType = TagType.DETAIL,
 
     /** 생성 일시 */
     @Column(nullable = false, updatable = false)

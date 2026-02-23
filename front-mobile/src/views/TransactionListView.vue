@@ -35,14 +35,23 @@
             <div style="min-width: 0; flex: 1">
               <div class="text-body-2 font-weight-medium text-truncate">{{ tx.merchantName || '사용처 없음' }}</div>
               <div class="text-caption text-grey">{{ tx.cardCompanyName }} &middot; {{ formatDate(tx.transactionDate) }}</div>
-              <div v-if="tx.tags && tx.tags.length > 0" class="mt-1">
+              <div v-if="(tx.mainTag || (tx.detailTags && tx.detailTags.length > 0))" class="mt-1">
                 <v-chip
-                  v-for="tag in tx.tags"
-                  :key="tag.id"
-                  :color="tag.color"
+                  v-if="tx.mainTag"
+                  :color="tx.mainTag.color"
                   size="x-small"
                   variant="flat"
                   class="text-white mr-1"
+                >
+                  ★ {{ tx.mainTag.name }}
+                </v-chip>
+                <v-chip
+                  v-for="tag in tx.detailTags"
+                  :key="tag.id"
+                  :color="tag.color"
+                  size="x-small"
+                  variant="outlined"
+                  class="mr-1"
                 >
                   {{ tag.name }}
                 </v-chip>
@@ -97,30 +106,55 @@
             <v-list-item title="전화번호" :subtitle="selectedTransaction.phoneNumber || '-'" />
           </v-list>
 
-          <!-- 태그 할당/해제 -->
+          <!-- 주요 태그 -->
           <v-divider class="my-3" />
-          <div class="text-subtitle-2 mb-2">태그</div>
-          <div class="d-flex flex-wrap ga-1 mb-3">
+          <div class="text-subtitle-2 mb-2">주요 태그</div>
+          <div class="d-flex flex-wrap ga-1 mb-2">
             <v-chip
-              v-for="tag in selectedTransaction.tags"
-              :key="tag.id"
-              :color="tag.color"
+              v-if="selectedTransaction.mainTag"
+              :color="selectedTransaction.mainTag.color"
               size="small"
               variant="flat"
               class="text-white"
+              closable
+              @click:close="removeTag(selectedTransaction.id, selectedTransaction.mainTag.id)"
+            >
+              ★ {{ selectedTransaction.mainTag.name }}
+            </v-chip>
+            <span v-else class="text-grey text-body-2">미지정</span>
+          </div>
+          <v-select
+            v-model="mainTagToSet"
+            :items="mainTagOptions"
+            label="주요 태그 설정"
+            density="compact"
+            hide-details
+            clearable
+            @update:model-value="changeMainTag"
+          />
+
+          <!-- 세부 태그 -->
+          <div class="text-subtitle-2 mt-4 mb-2">세부 태그</div>
+          <div class="d-flex flex-wrap ga-1 mb-2">
+            <v-chip
+              v-for="tag in selectedTransaction.detailTags"
+              :key="tag.id"
+              :color="tag.color"
+              size="small"
+              variant="outlined"
               closable
               @click:close="removeTag(selectedTransaction.id, tag.id)"
             >
               {{ tag.name }}
             </v-chip>
-            <span v-if="!selectedTransaction.tags || selectedTransaction.tags.length === 0" class="text-grey text-body-2">
-              태그 없음
+            <span v-if="!selectedTransaction.detailTags || selectedTransaction.detailTags.length === 0" class="text-grey text-body-2">
+              세부 태그 없음
             </span>
           </div>
           <v-select
             v-model="tagToAdd"
             :items="availableTagsForSelected"
-            label="태그 추가"
+            label="세부 태그 추가"
             density="compact"
             hide-details
             clearable
@@ -162,7 +196,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   fetchTransactions, fetchParseFailures, fetchCreditCards,
-  fetchTags, addTagToTransaction, removeTagFromTransaction
+  fetchTags, addTagToTransaction, removeTagFromTransaction, setMainTag
 } from '../api'
 
 const route = useRoute()
@@ -179,6 +213,7 @@ const failureDialog = ref(false)
 const selectedTransaction = ref(null)
 const selectedFailure = ref(null)
 const tagToAdd = ref(null)
+const mainTagToSet = ref(null)
 const snackbar = ref({ show: false, text: '', color: '' })
 
 /** 등록된 카드 기반 필터 항목 (카드사명 + 끝4자리) */
@@ -199,12 +234,21 @@ const filteredTransactions = computed(() => {
   )
 })
 
-/** 선택된 거래에 아직 할당되지 않은 태그 */
+/** 선택된 거래에 아직 할당되지 않은 태그 (세부 태그 추가용) */
 const availableTagsForSelected = computed(() => {
   if (!selectedTransaction.value) return []
   const assignedIds = (selectedTransaction.value.tags || []).map(t => t.id)
   return allTags.value
     .filter(t => !assignedIds.includes(t.id))
+    .map(t => ({ title: t.name, value: t.id }))
+})
+
+/** 주요 태그 설정용 옵션 */
+const mainTagOptions = computed(() => {
+  if (!selectedTransaction.value) return []
+  const mainTagId = selectedTransaction.value.mainTag?.id
+  return allTags.value
+    .filter(t => t.id !== mainTagId)
     .map(t => ({ title: t.name, value: t.id }))
 })
 
@@ -225,20 +269,35 @@ function openFailureDetail(f) {
   failureDialog.value = true
 }
 
-/** 거래에 태그 추가 */
+/** 거래에 세부 태그 추가 */
 async function addTag(tagId) {
   if (!tagId || !selectedTransaction.value) return
   try {
-    await addTagToTransaction(selectedTransaction.value.id, tagId)
-    const tag = allTags.value.find(t => t.id === tagId)
-    if (tag) {
+    const res = await addTagToTransaction(selectedTransaction.value.id, tagId, 'DETAIL')
+    const tagData = res.data
+    if (tagData) {
       if (!selectedTransaction.value.tags) selectedTransaction.value.tags = []
-      selectedTransaction.value.tags.push(tag)
+      if (!selectedTransaction.value.detailTags) selectedTransaction.value.detailTags = []
+      selectedTransaction.value.tags.push(tagData)
+      selectedTransaction.value.detailTags.push(tagData)
     }
     tagToAdd.value = null
-    snackbar.value = { show: true, text: '태그 할당 완료', color: 'green' }
+    snackbar.value = { show: true, text: '세부 태그 할당 완료', color: 'green' }
   } catch (e) {
     snackbar.value = { show: true, text: '태그 할당 실패: ' + (e.response?.data?.message || e.message), color: 'red' }
+  }
+}
+
+/** 주요 태그 변경 */
+async function changeMainTag(tagId) {
+  if (!tagId || !selectedTransaction.value) return
+  try {
+    await setMainTag(selectedTransaction.value.id, tagId)
+    await refreshSelectedTransaction()
+    mainTagToSet.value = null
+    snackbar.value = { show: true, text: '주요 태그 설정 완료', color: 'green' }
+  } catch (e) {
+    snackbar.value = { show: true, text: '주요 태그 설정 실패: ' + (e.response?.data?.message || e.message), color: 'red' }
   }
 }
 
@@ -246,12 +305,21 @@ async function addTag(tagId) {
 async function removeTag(transactionId, tagId) {
   try {
     await removeTagFromTransaction(transactionId, tagId)
-    if (selectedTransaction.value) {
-      selectedTransaction.value.tags = selectedTransaction.value.tags.filter(t => t.id !== tagId)
-    }
+    await refreshSelectedTransaction()
     snackbar.value = { show: true, text: '태그 해제 완료', color: 'green' }
   } catch (e) {
     snackbar.value = { show: true, text: '태그 해제 실패', color: 'red' }
+  }
+}
+
+/** 선택된 거래의 태그 정보 새로고침 */
+async function refreshSelectedTransaction() {
+  if (!selectedTransaction.value) return
+  const txId = selectedTransaction.value.id
+  await loadTransactions()
+  const updated = transactions.value.find(t => t.id === txId)
+  if (updated) {
+    selectedTransaction.value = updated
   }
 }
 

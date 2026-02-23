@@ -120,4 +120,46 @@ interface CardTransactionRepository : JpaRepository<CardTransaction, Long> {
         @Param("startDate") startDate: LocalDateTime,
         @Param("endDate") endDate: LocalDateTime
     ): BigDecimal
+
+    /**
+     * 태그 미분류 거래의 총액을 조회합니다.
+     *
+     * transaction_tags 테이블에 매핑이 없는 거래의 금액을 합산합니다.
+     */
+    @Query(
+        value = """
+            SELECT COALESCE(SUM(ct.amount), 0)
+            FROM aguagu.card_transactions ct
+            WHERE ct.transaction_date BETWEEN :startDate AND :endDate
+            AND NOT EXISTS (
+                SELECT 1 FROM aguagu.transaction_tags tt WHERE tt.transaction_id = ct.id
+            )
+        """,
+        nativeQuery = true
+    )
+    fun sumUntaggedAmountByPeriod(
+        @Param("startDate") startDate: LocalDateTime,
+        @Param("endDate") endDate: LocalDateTime
+    ): BigDecimal
+
+    /**
+     * 태그 미분류 거래의 건수를 조회합니다.
+     *
+     * transaction_tags 테이블에 매핑이 없는 거래 건수를 반환합니다.
+     */
+    @Query(
+        value = """
+            SELECT COUNT(ct.id)
+            FROM aguagu.card_transactions ct
+            WHERE ct.transaction_date BETWEEN :startDate AND :endDate
+            AND NOT EXISTS (
+                SELECT 1 FROM aguagu.transaction_tags tt WHERE tt.transaction_id = ct.id
+            )
+        """,
+        nativeQuery = true
+    )
+    fun countUntaggedByPeriod(
+        @Param("startDate") startDate: LocalDateTime,
+        @Param("endDate") endDate: LocalDateTime
+    ): Long
 }

@@ -35,8 +35,12 @@ data class CardTransactionResponse(
     val accumulatedAmount: BigDecimal?,
     @Schema(description = "생성 일시", example = "2025-01-15T17:52:30")
     val createdAt: LocalDateTime,
-    @Schema(description = "태그 목록")
-    val tags: List<TagResponse> = emptyList()
+    @Schema(description = "주요 태그 (MAIN, 최대 1개)")
+    val mainTag: TransactionTagResponse? = null,
+    @Schema(description = "세부 태그 목록 (DETAIL)")
+    val detailTags: List<TransactionTagResponse> = emptyList(),
+    @Schema(description = "전체 태그 목록 (하위 호환)")
+    val tags: List<TransactionTagResponse> = emptyList()
 ) {
     companion object {
         /**
@@ -46,7 +50,9 @@ data class CardTransactionResponse(
          * @param tags 태그 목록 (기본값: 빈 리스트)
          * @return CardTransactionResponse DTO
          */
-        fun from(entity: CardTransaction, tags: List<TagResponse> = emptyList()): CardTransactionResponse {
+        fun from(entity: CardTransaction, tags: List<TransactionTagResponse> = emptyList()): CardTransactionResponse {
+            val mainTag = tags.find { it.tagType == com.woo.server.common.enums.TagType.MAIN }
+            val detailTags = tags.filter { it.tagType == com.woo.server.common.enums.TagType.DETAIL }
             return CardTransactionResponse(
                 id = entity.id!!,
                 phoneNumber = entity.phoneNumber,
@@ -58,6 +64,8 @@ data class CardTransactionResponse(
                 merchantName = entity.merchantName,
                 accumulatedAmount = entity.accumulatedAmount,
                 createdAt = entity.createdAt,
+                mainTag = mainTag,
+                detailTags = detailTags,
                 tags = tags
             )
         }

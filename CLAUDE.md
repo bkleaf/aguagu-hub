@@ -42,7 +42,8 @@ com.woo.server
 │   │   └── WebConfig                       # SPA(Vue Router) 폴백 설정
 │   ├── enums/
 │   │   ├── CardCompany                     # 카드사 열거형 (SAMSUNG, HYUNDAI, KB 등 10개)
-│   │   └── LimitType                       # 한도 유형 열거형 (MONTHLY, YEARLY, CUSTOM)
+│   │   ├── LimitType                       # 한도 유형 열거형 (MONTHLY, YEARLY, CUSTOM)
+│   │   └── TagType                         # 태그 유형 열거형 (MAIN, DETAIL)
 │   └── notification/
 │       ├── TelegramNotificationService     # Telegram 거래 알림 서비스
 │       ├── TelegramCommandService          # Telegram 봇 명령어 처리 (/limit, /card, /start)
@@ -194,3 +195,4 @@ deploy.bat
 | `2026-02-18.md` | 자동결제(AutoPayment) CRUD, 프론트엔드 관리 페이지 |
 | `2026-02-18-mobile-frontend.md` | 모바일 프론트엔드 경로 기반 분리 (`/m/*`) |
 | `2026-02-20.md` | 카드별 사용 현황 대시보드 (PC/모바일), 한도 기간 기준 잔여금액, 모바일 메뉴 변경 |
+| `2026-02-22.md` | 태그 Main/Detail 분리 (TagType enum, 주요/세부 태그 구분, 통계 필터) |

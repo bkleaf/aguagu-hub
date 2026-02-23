@@ -1,0 +1,50 @@
+### 태그별 금액 요약 - 이번 달 (전체)
+GET {{host}}/api/v1/card/tags/statistics/summary?startDate=2026-02-01&endDate=2026-02-28
+
+### 태그별 금액 요약 - 이번 달 (MAIN 태그만)
+GET {{host}}/api/v1/card/tags/statistics/summary?startDate=2026-02-01&endDate=2026-02-28&tagType=MAIN
+
+### 태그별 금액 요약 - 이번 달 (DETAIL 태그만)
+GET {{host}}/api/v1/card/tags/statistics/summary?startDate=2026-02-01&endDate=2026-02-28&tagType=DETAIL
+
+### 태그별 금액 요약 - 지난 달
+GET {{host}}/api/v1/card/tags/statistics/summary?startDate=2026-01-01&endDate=2026-01-31
+
+### 태그별 금액 요약 - 최근 3개월
+GET {{host}}/api/v1/card/tags/statistics/summary?startDate=2025-12-01&endDate=2026-02-28
+
+### 태그별 금액 요약 - 올해 전체
+GET {{host}}/api/v1/card/tags/statistics/summary?startDate=2026-01-01&endDate=2026-12-31
+
+### 태그별 월간 추이 - 최근 6개월 (전체)
+GET {{host}}/api/v1/card/tags/statistics/monthly-trend?startDate=2025-09-01&endDate=2026-02-28
+
+### 태그별 월간 추이 - 최근 6개월 (MAIN 태그만)
+GET {{host}}/api/v1/card/tags/statistics/monthly-trend?startDate=2025-09-01&endDate=2026-02-28&tagType=MAIN
+
+### 태그별 월간 추이 - 최근 3개월
+GET {{host}}/api/v1/card/tags/statistics/monthly-trend?startDate=2025-12-01&endDate=2026-02-28
+
+### 태그별 월간 추이 - 올해 전체
+GET {{host}}/api/v1/card/tags/statistics/monthly-trend?startDate=2026-01-01&endDate=2026-12-31
+
+### 미분류 거래 요약 - 이번 달
+GET {{host}}/api/v1/card/tags/statistics/untagged?startDate=2026-02-01&endDate=2026-02-28
+
+### 미분류 거래 요약 - 최근 3개월
+GET {{host}}/api/v1/card/tags/statistics/untagged?startDate=2025-12-01&endDate=2026-02-28
+
+### 태그 금액 합산 - 단일 태그 (이번 달)
+GET {{host}}/api/v1/card/tags/statistics/aggregate?startDate=2026-02-01&endDate=2026-02-28&tagIds=1
+
+### 태그 금액 합산 - 다중 태그 (이번 달)
+GET {{host}}/api/v1/card/tags/statistics/aggregate?startDate=2026-02-01&endDate=2026-02-28&tagIds=1,2,3
+
+### 태그 금액 합산 - 다중 태그 (최근 3개월)
+GET {{host}}/api/v1/card/tags/statistics/aggregate?startDate=2025-12-01&endDate=2026-02-28&tagIds=1,2
+
+### 태그 금액 합산 - 다중 태그 (최근 6개월)
+GET {{host}}/api/v1/card/tags/statistics/aggregate?startDate=2025-09-01&endDate=2026-02-28&tagIds=1,2,3
+
+### 태그 금액 합산 - 다중 태그 (올해 전체)
+GET {{host}}/api/v1/card/tags/statistics/aggregate?startDate=2026-01-01&endDate=2026-12-31&tagIds=1,2,3

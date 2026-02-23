@@ -49,23 +49,41 @@ Content-Type: application/json
 ### 태그 삭제 (ID=1)
 DELETE {{host}}/api/v1/card/tags/1
 
-### 거래에 태그 할당 (거래 ID=1, 태그 ID=1)
+### 거래에 MAIN 태그 할당 (거래 ID=1, 태그 ID=1)
 POST {{host}}/api/v1/card/tags/transactions/1/tags
 Content-Type: application/json
 
 {
-  "tagId": 1
+  "tagId": 1,
+  "tagType": "MAIN"
 }
 
-### 거래에 태그 할당 (거래 ID=1, 태그 ID=2)
+### 거래에 DETAIL 태그 할당 (거래 ID=1, 태그 ID=2)
 POST {{host}}/api/v1/card/tags/transactions/1/tags
+Content-Type: application/json
+
+{
+  "tagId": 2,
+  "tagType": "DETAIL"
+}
+
+### 거래에 DETAIL 태그 할당 - tagType 생략 시 기본값 DETAIL (거래 ID=1, 태그 ID=3)
+POST {{host}}/api/v1/card/tags/transactions/1/tags
+Content-Type: application/json
+
+{
+  "tagId": 3
+}
+
+### 거래의 주요 태그 설정/변경 (거래 ID=1, 태그 ID=2를 MAIN으로)
+PUT {{host}}/api/v1/card/tags/transactions/1/main-tag
 Content-Type: application/json
 
 {
   "tagId": 2
 }
 
-### 거래의 태그 목록 조회 (거래 ID=1)
+### 거래의 태그 목록 조회 (거래 ID=1) - tagType 포함
 GET {{host}}/api/v1/card/tags/transactions/1/tags
 
 ### 거래에서 태그 해제 (거래 ID=1, 태그 ID=2)

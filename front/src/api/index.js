@@ -50,5 +50,20 @@ export const createTag = (data) => api.post('/tags', data)
 export const updateTag = (id, data) => api.put(`/tags/${id}`, data)
 export const deleteTag = (id) => api.delete(`/tags/${id}`)
 export const fetchTransactionTags = (transactionId) => api.get(`/tags/transactions/${transactionId}/tags`)
-export const addTagToTransaction = (transactionId, tagId) => api.post(`/tags/transactions/${transactionId}/tags`, { tagId })
+export const addTagToTransaction = (transactionId, tagId, tagType = 'DETAIL') => api.post(`/tags/transactions/${transactionId}/tags`, { tagId, tagType })
 export const removeTagFromTransaction = (transactionId, tagId) => api.delete(`/tags/transactions/${transactionId}/tags/${tagId}`)
+export const setMainTag = (transactionId, tagId) => api.put(`/tags/transactions/${transactionId}/main-tag`, { tagId })
+
+// 태그 통계 API
+export const fetchTagStatisticsSummary = (startDate, endDate, tagType) => {
+  const params = { startDate, endDate }
+  if (tagType) params.tagType = tagType
+  return api.get('/tags/statistics/summary', { params })
+}
+export const fetchTagMonthlyTrend = (startDate, endDate, tagType) => {
+  const params = { startDate, endDate }
+  if (tagType) params.tagType = tagType
+  return api.get('/tags/statistics/monthly-trend', { params })
+}
+export const fetchTagUntaggedSummary = (startDate, endDate) => api.get('/tags/statistics/untagged', { params: { startDate, endDate } })
+export const fetchTagAggregate = (startDate, endDate, tagIds) => api.get('/tags/statistics/aggregate', { params: { startDate, endDate, tagIds: tagIds.join(',') } })

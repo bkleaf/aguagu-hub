@@ -19,7 +19,14 @@
       "Bash(findstr:*)",
       "Bash(powershell -Command:*)",
       "Bash(netsh interface ipv4 show excludedportrange:*)",
-      "Bash(./gradlew bootRun:*)"
+      "Bash(./gradlew bootRun:*)",
+      "Bash(git log:*)",
+      "Bash(npm install:*)",
+      "Bash(./gradlew:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(head:*)",
+      "WebFetch(domain:echarts.apache.org)",
+      "WebFetch(domain:vue-echarts.dev)"
     ]
   }
 }

@@ -1,7 +1,9 @@
 package com.woo.server.domain.card.service
 
+import com.woo.server.common.enums.TagType
 import com.woo.server.domain.card.dto.TagRequest
 import com.woo.server.domain.card.dto.TagResponse
+import com.woo.server.domain.card.dto.TransactionTagResponse
 import com.woo.server.domain.card.entity.Tag
 import com.woo.server.domain.card.entity.TransactionTag
 import com.woo.server.domain.card.repository.CardTransactionRepository
@@ -16,6 +18,7 @@ import java.time.LocalDateTime
  * 태그 서비스
  *
  * 태그의 CRUD 및 거래-태그 할당/해제 기능을 제공합니다.
+ * 태그 유형(MAIN/DETAIL)에 따라 주요 태그와 세부 태그를 관리합니다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -110,12 +113,13 @@ class TagService(
      *
      * @param transactionId 거래 ID
      * @param tagId 태그 ID
+     * @param tagType 태그 유형 (MAIN/DETAIL, 기본값: DETAIL)
      * @return 할당된 태그 응답
      * @throws IllegalArgumentException 거래 또는 태그가 없는 경우
-     * @throws IllegalStateException 이미 할당된 경우
+     * @throws IllegalStateException 이미 할당된 경우 또는 MAIN 태그가 이미 존재하는 경우
      */
     @Transactional
-    fun addTagToTransaction(transactionId: Long, tagId: Long): TagResponse {
+    fun addTagToTransaction(transactionId: Long, tagId: Long, tagType: TagType = TagType.DETAIL): TransactionTagResponse {
         val transaction = cardTransactionRepository.findById(transactionId)
             .orElseThrow { IllegalArgumentException("거래를 찾을 수 없습니다: ID=$transactionId") }
         val tag = tagRepository.findById(tagId)
@@ -125,13 +129,65 @@ class TagService(
             throw IllegalStateException("이미 할당된 태그입니다")
         }
 
+        // MAIN 태그 중복 방지
+        if (tagType == TagType.MAIN && transactionTagRepository.existsByTransactionIdAndTagType(transactionId, TagType.MAIN)) {
+            throw IllegalStateException("이미 주요 태그가 할당되어 있습니다. setMainTag를 사용해주세요.")
+        }
+
         val transactionTag = TransactionTag(
             transaction = transaction,
-            tag = tag
+            tag = tag,
+            tagType = tagType
         )
-        transactionTagRepository.save(transactionTag)
-        log.info("거래-태그 할당 완료: transactionId=$transactionId, tagId=$tagId")
-        return TagResponse.from(tag)
+        val saved = transactionTagRepository.save(transactionTag)
+        log.info("거래-태그 할당 완료: transactionId=$transactionId, tagId=$tagId, tagType=$tagType")
+        return TransactionTagResponse.from(saved)
+    }
+
+    /**
+     * 거래의 주요 태그를 설정합니다.
+     *
+     * 기존 MAIN 태그가 있으면 DETAIL로 변경한 후, 지정된 태그를 MAIN으로 설정합니다.
+     * 해당 태그가 아직 거래에 할당되지 않은 경우 새로 할당합니다.
+     *
+     * @param transactionId 거래 ID
+     * @param tagId 주요 태그로 설정할 태그 ID
+     * @return 설정된 주요 태그 응답
+     */
+    @Transactional
+    fun setMainTag(transactionId: Long, tagId: Long): TransactionTagResponse {
+        val transaction = cardTransactionRepository.findById(transactionId)
+            .orElseThrow { IllegalArgumentException("거래를 찾을 수 없습니다: ID=$transactionId") }
+        val tag = tagRepository.findById(tagId)
+            .orElseThrow { IllegalArgumentException("태그를 찾을 수 없습니다: ID=$tagId") }
+
+        // 기존 MAIN 태그를 DETAIL로 변경
+        val existingMainTags = transactionTagRepository.findByTransactionIdAndTagType(transactionId, TagType.MAIN)
+        existingMainTags.forEach { it.tagType = TagType.DETAIL }
+        if (existingMainTags.isNotEmpty()) {
+            transactionTagRepository.saveAll(existingMainTags)
+        }
+
+        // 해당 태그가 이미 거래에 할당되어 있는지 확인
+        val existingTag = transactionTagRepository.findByTransactionIdWithTag(transactionId)
+            .find { it.tag.id == tagId }
+
+        val result = if (existingTag != null) {
+            // 이미 할당된 경우 유형만 MAIN으로 변경
+            existingTag.tagType = TagType.MAIN
+            transactionTagRepository.save(existingTag)
+        } else {
+            // 새로 할당
+            val transactionTag = TransactionTag(
+                transaction = transaction,
+                tag = tag,
+                tagType = TagType.MAIN
+            )
+            transactionTagRepository.save(transactionTag)
+        }
+
+        log.info("주요 태그 설정 완료: transactionId=$transactionId, tagId=$tagId")
+        return TransactionTagResponse.from(result)
     }
 
     /**
@@ -147,13 +203,13 @@ class TagService(
     }
 
     /**
-     * 거래에 할당된 태그 목록을 조회합니다.
+     * 거래에 할당된 태그 목록을 조회합니다 (태그 유형 포함).
      *
      * @param transactionId 거래 ID
-     * @return 태그 목록
+     * @return 태그 목록 (유형 포함)
      */
-    fun getTagsByTransactionId(transactionId: Long): List<TagResponse> {
+    fun getTagsByTransactionId(transactionId: Long): List<TransactionTagResponse> {
         return transactionTagRepository.findByTransactionIdWithTag(transactionId)
-            .map { TagResponse.from(it.tag) }
+            .map { TransactionTagResponse.from(it) }
     }
 }
