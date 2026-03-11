@@ -1,5 +1,6 @@
 package com.woo.server.domain.card.repository
 
+import com.woo.server.common.enums.TagType
 import com.woo.server.domain.card.entity.Tag
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
@@ -7,7 +8,7 @@ import org.springframework.stereotype.Repository
 /**
  * 태그 리포지토리
  *
- * 태그의 CRUD 및 이름 기반 조회를 제공합니다.
+ * 태그의 CRUD 및 이름/유형 기반 조회를 제공합니다.
  */
 @Repository
 interface TagRepository : JpaRepository<Tag, Long> {
@@ -17,4 +18,7 @@ interface TagRepository : JpaRepository<Tag, Long> {
 
     /** 태그 이름 존재 여부 확인 */
     fun existsByName(name: String): Boolean
+
+    /** 태그 유형으로 조회 */
+    fun findByTagType(tagType: TagType): List<Tag>
 }

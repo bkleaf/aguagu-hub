@@ -39,7 +39,7 @@ class TagStatisticsService(
      */
     fun getSummary(startDate: LocalDate, endDate: LocalDate, tagType: TagType? = null): TagStatisticsSummaryResponse {
         val startDateTime = startDate.atStartOfDay()
-        val endDateTime = endDate.atTime(23, 59, 59)
+        val endDateTime = endDate.atTime(23, 59, 59, 999_999_999)
 
         // 태그별 집계 조회 (태그 유형 필터 적용)
         val tagAggregations = if (tagType != null) {
@@ -103,7 +103,7 @@ class TagStatisticsService(
      */
     fun getMonthlyTrend(startDate: LocalDate, endDate: LocalDate, tagType: TagType? = null): TagMonthlyTrendResponse {
         val startDateTime = startDate.atStartOfDay()
-        val endDateTime = endDate.atTime(23, 59, 59)
+        val endDateTime = endDate.atTime(23, 59, 59, 999_999_999)
 
         // 월 목록 생성
         val months = generateMonthList(startDate, endDate)
@@ -161,7 +161,7 @@ class TagStatisticsService(
      */
     fun getAggregateByTagIds(startDate: LocalDate, endDate: LocalDate, tagIds: List<Long>): TagAmountAggregateResponse {
         val startDateTime = startDate.atStartOfDay()
-        val endDateTime = endDate.atTime(23, 59, 59)
+        val endDateTime = endDate.atTime(23, 59, 59, 999_999_999)
 
         // 선택 태그별 금액 집계 (MAIN 태그 기준)
         val tagAggregations = transactionTagRepository.sumAmountByTagIdsAndPeriod(
@@ -254,7 +254,7 @@ class TagStatisticsService(
      */
     fun getUntaggedSummary(startDate: LocalDate, endDate: LocalDate): UntaggedTransactionSummaryResponse {
         val startDateTime = startDate.atStartOfDay()
-        val endDateTime = endDate.atTime(23, 59, 59)
+        val endDateTime = endDate.atTime(23, 59, 59, 999_999_999)
 
         val totalAmount = cardTransactionRepository.sumUntaggedAmountByPeriod(startDateTime, endDateTime)
         val transactionCount = cardTransactionRepository.countUntaggedByPeriod(startDateTime, endDateTime)

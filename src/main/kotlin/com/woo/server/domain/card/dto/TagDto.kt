@@ -22,7 +22,10 @@ data class TagRequest(
     @Schema(description = "태그 색상 (hex)", example = "#2196F3")
     @field:NotBlank(message = "태그 색상은 필수입니다")
     @field:Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "올바른 hex 색상 형식이어야 합니다 (예: #2196F3)")
-    val color: String = "#2196F3"
+    val color: String = "#2196F3",
+
+    @Schema(description = "태그 유형 (MAIN/DETAIL, 기본값: DETAIL)", example = "DETAIL")
+    val tagType: TagType = TagType.DETAIL
 )
 
 /**
@@ -39,6 +42,9 @@ data class TagResponse(
     @Schema(description = "태그 색상 (hex)", example = "#2196F3")
     val color: String,
 
+    @Schema(description = "태그 유형 (MAIN/DETAIL)", example = "DETAIL")
+    val tagType: TagType,
+
     @Schema(description = "생성 일시", example = "2026-02-20T10:00:00")
     val createdAt: LocalDateTime
 ) {
@@ -54,6 +60,7 @@ data class TagResponse(
                 id = entity.id!!,
                 name = entity.name,
                 color = entity.color,
+                tagType = entity.tagType,
                 createdAt = entity.createdAt
             )
         }

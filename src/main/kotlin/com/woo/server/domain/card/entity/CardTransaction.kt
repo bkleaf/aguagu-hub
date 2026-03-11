@@ -23,7 +23,7 @@ import java.time.LocalDateTime
     uniqueConstraints = [
         UniqueConstraint(
             name = "uk_card_transaction_unique",
-            columnNames = ["cardCompany", "amount", "transactionDate", "merchantName"]
+            columnNames = ["cardCompany", "cardLastFourDigits", "amount", "transactionDate", "merchantName"]
         )
     ]
 )
@@ -65,6 +65,10 @@ class CardTransaction(
     /** 원본 문자 메시지 */
     @Column(nullable = false, columnDefinition = "TEXT")
     val rawMessage: String,
+
+    /** 취소 여부 */
+    @Column(nullable = false)
+    var cancelled: Boolean = false,
 
     /** 생성 일시 */
     @Column(nullable = false, updatable = false)

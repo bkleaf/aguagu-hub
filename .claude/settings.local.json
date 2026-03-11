@@ -26,7 +26,12 @@
       "mcp__ide__getDiagnostics",
       "Bash(head:*)",
       "WebFetch(domain:echarts.apache.org)",
-      "WebFetch(domain:vue-echarts.dev)"
+      "WebFetch(domain:vue-echarts.dev)",
+      "Bash(ls directory:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(python3:*)",
+      "Bash(node:*)"
     ]
   }
 }

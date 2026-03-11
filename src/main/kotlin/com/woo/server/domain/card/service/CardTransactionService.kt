@@ -16,6 +16,7 @@ import com.woo.server.common.notification.TelegramNotificationService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 
 /**
  * 카드 거래 내역 서비스
@@ -91,9 +92,18 @@ class CardTransactionService(
             log.info("등록된 신용카드 없음 (미등록 카드)")
         }
 
-        // 중복 거래 확인
-        val isDuplicate = cardTransactionRepository.existsByCardCompanyAndAmountAndTransactionDateAndMerchantName(
+        // 거래 저장 시 사용할 카드 끝4자리 (매칭된 CreditCard가 있으면 원본 끝4자리 사용)
+        val cardLastFourDigits = matchedCreditCard?.lastFourDigits ?: parseResult.cardLastFourDigits
+
+        // 취소 문자 처리
+        if (parseResult.cancelled) {
+            return processCancellation(cardCompany, cardLastFourDigits, parseResult, phoneNumber, message)
+        }
+
+        // 중복 거래 확인 (카드 끝4자리 포함)
+        val isDuplicate = cardTransactionRepository.existsByCardCompanyAndCardLastFourDigitsAndAmountAndTransactionDateAndMerchantName(
             cardCompany = cardCompany,
+            cardLastFourDigits = cardLastFourDigits,
             amount = parseResult.amount!!,
             transactionDate = parseResult.transactionDate!!,
             merchantName = parseResult.merchantName!!
@@ -104,8 +114,7 @@ class CardTransactionService(
             return CardMessageProcessResponse.duplicate()
         }
 
-        // 거래 저장 (매칭된 CreditCard가 있으면 원본 끝4자리 사용)
-        val cardLastFourDigits = matchedCreditCard?.lastFourDigits ?: parseResult.cardLastFourDigits
+        // 거래 저장
         val transaction = CardTransaction(
             phoneNumber = phoneNumber,
             cardCompany = cardCompany,
@@ -136,9 +145,95 @@ class CardTransactionService(
         return CardMessageProcessResponse.success(CardTransactionResponse.from(saved))
     }
 
+    /**
+     * 취소 문자를 처리합니다.
+     *
+     * 1. 원본 거래 검색 (카드사 + 카드 끝4자리 + 금액 + 사용처 + 취소되지 않은 건)
+     * 2. 매칭 성공: 원본 거래의 cancelled를 true로 설정
+     * 3. 매칭 실패: 취소 거래를 cancelled=true로 새로 저장
+     */
+    private fun processCancellation(
+        cardCompany: CardCompany,
+        cardLastFourDigits: String?,
+        parseResult: com.woo.server.domain.card.parser.ParseResult,
+        phoneNumber: String,
+        message: String
+    ): CardMessageProcessResponse {
+        log.info("취소 문자 처리 시작 - 카드사: ${cardCompany.displayName}, 금액: ${parseResult.amount}")
+
+        // 원본 거래 검색
+        val originalTransaction = if (cardLastFourDigits != null) {
+            cardTransactionRepository.findFirstByCardCompanyAndCardLastFourDigitsAndAmountAndMerchantNameAndCancelledFalseOrderByTransactionDateDesc(
+                cardCompany = cardCompany,
+                cardLastFourDigits = cardLastFourDigits,
+                amount = parseResult.amount!!,
+                merchantName = parseResult.merchantName!!
+            )
+        } else null
+
+        if (originalTransaction != null) {
+            // 매칭 성공: 원본 거래 취소 표시
+            originalTransaction.cancelled = true
+            val saved = cardTransactionRepository.save(originalTransaction)
+            log.info("원본 거래 취소 처리 완료: ID=${saved.id}")
+
+            try {
+                telegramNotificationService.notifyCancellation(saved)
+            } catch (e: Exception) {
+                log.error("텔레그램 취소 알림 실패", e)
+            }
+
+            return CardMessageProcessResponse.cancelSuccess(CardTransactionResponse.from(saved))
+        } else {
+            // 매칭 실패: 취소 거래를 cancelled=true로 새로 저장
+            log.warn("원본 거래를 찾을 수 없음 - 취소 거래 별도 저장")
+            val cancelTransaction = CardTransaction(
+                phoneNumber = phoneNumber,
+                cardCompany = cardCompany,
+                cardLastFourDigits = cardLastFourDigits,
+                amount = parseResult.amount!!,
+                transactionDate = parseResult.transactionDate!!,
+                merchantName = parseResult.merchantName!!,
+                accumulatedAmount = null,
+                rawMessage = message,
+                cancelled = true
+            )
+
+            val saved = cardTransactionRepository.save(cancelTransaction)
+            log.info("취소 거래 별도 저장 완료: ID=${saved.id}")
+
+            try {
+                telegramNotificationService.notifyCancellation(saved)
+            } catch (e: Exception) {
+                log.error("텔레그램 취소 알림 실패", e)
+            }
+
+            return CardMessageProcessResponse.cancelUnmatched(CardTransactionResponse.from(saved))
+        }
+    }
+
     /** 모든 거래 내역을 조회합니다 (태그 포함). */
     fun getAllTransactions(): List<CardTransactionResponse> {
         val transactions = cardTransactionRepository.findAllByOrderByCreatedAtDesc()
+        val tagMap = getTagMapForTransactions(transactions)
+        return transactions.map { tx ->
+            CardTransactionResponse.from(tx, tagMap[tx.id] ?: emptyList())
+        }
+    }
+
+    /**
+     * 기간별 거래 내역을 조회합니다 (태그 포함).
+     *
+     * @param startDate 시작일
+     * @param endDate 종료일
+     * @return 해당 기간의 거래 내역 목록 (거래일시 내림차순)
+     */
+    fun getTransactionsByDateRange(startDate: LocalDate, endDate: LocalDate): List<CardTransactionResponse> {
+        val startDateTime = startDate.atStartOfDay()
+        val endDateTime = endDate.atTime(23, 59, 59, 999_999_999)
+        val transactions = cardTransactionRepository.findByTransactionDateBetweenOrderByTransactionDateDesc(
+            startDateTime, endDateTime
+        )
         val tagMap = getTagMapForTransactions(transactions)
         return transactions.map { tx ->
             CardTransactionResponse.from(tx, tagMap[tx.id] ?: emptyList())

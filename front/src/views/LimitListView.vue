@@ -1,8 +1,33 @@
 <template>
   <div>
     <v-row class="mb-4">
-      <v-col>
+      <v-col cols="auto">
         <v-btn color="primary" prepend-icon="mdi-plus" @click="openForm()">한도 추가</v-btn>
+      </v-col>
+    </v-row>
+
+    <!-- 년/월 선택 필터 -->
+    <v-row class="mb-4" align="center">
+      <v-col cols="2">
+        <v-select
+          v-model="selectedYear"
+          :items="yearOptions"
+          label="년도"
+          density="compact"
+          hide-details
+        />
+      </v-col>
+      <v-col cols="2">
+        <v-select
+          v-model="selectedMonth"
+          :items="monthOptions"
+          label="월"
+          density="compact"
+          hide-details
+        />
+      </v-col>
+      <v-col cols="auto">
+        <v-btn color="primary" variant="outlined" @click="load">조회</v-btn>
       </v-col>
     </v-row>
 
@@ -103,7 +128,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { fetchLimits, createOrUpdateLimit, deleteLimit, fetchCreditCards } from '../api'
 
 const loading = ref(false)
@@ -116,6 +141,23 @@ const editing = ref(false)
 const formRef = ref(null)
 const form = ref({ creditCardId: null, limitType: 'MONTHLY', limitAmount: 0, customStartDate: null, customEndDate: null })
 const snackbar = ref({ show: false, text: '', color: '' })
+
+/** 년/월 선택: 기본값은 현재 년/월 */
+const currentDate = new Date()
+const selectedYear = ref(currentDate.getFullYear())
+const selectedMonth = ref(currentDate.getMonth() + 1)
+
+/** 년도 옵션: 현재 년도 -2 ~ +1 */
+const yearOptions = computed(() => {
+  const y = currentDate.getFullYear()
+  return Array.from({ length: 4 }, (_, i) => y - 2 + i)
+})
+
+/** 월 옵션: 1~12 */
+const monthOptions = Array.from({ length: 12 }, (_, i) => ({
+  title: `${i + 1}월`,
+  value: i + 1
+}))
 
 /** 한도 유형 선택 항목 */
 const limitTypeItems = [
@@ -205,7 +247,7 @@ async function doDelete() {
 async function load() {
   loading.value = true
   try {
-    const res = await fetchLimits()
+    const res = await fetchLimits(selectedYear.value, selectedMonth.value)
     limits.value = res.data
   } catch (e) {
     console.error('한도 목록 로딩 실패', e)

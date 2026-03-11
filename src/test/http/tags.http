@@ -1,78 +1,98 @@
-### 태그 생성 - 식비
+### 태그 생성 - 식비 (주요 태그)
 POST {{host}}/api/v1/card/tags
 Content-Type: application/json
 
 {
   "name": "식비",
-  "color": "#4CAF50"
+  "color": "#4CAF50",
+  "tagType": "MAIN"
 }
 
-### 태그 생성 - 교통비
+### 태그 생성 - 교통비 (주요 태그)
 POST {{host}}/api/v1/card/tags
 Content-Type: application/json
 
 {
   "name": "교통비",
-  "color": "#2196F3"
+  "color": "#2196F3",
+  "tagType": "MAIN"
 }
 
-### 태그 생성 - 쇼핑
+### 태그 생성 - 쇼핑 (주요 태그)
 POST {{host}}/api/v1/card/tags
 Content-Type: application/json
 
 {
   "name": "쇼핑",
-  "color": "#FF9800"
+  "color": "#FF9800",
+  "tagType": "MAIN"
 }
 
-### 태그 생성 - 고정비
+### 태그 생성 - 점심 (세부 태그, 기본값)
 POST {{host}}/api/v1/card/tags
 Content-Type: application/json
 
 {
-  "name": "고정비",
-  "color": "#9C27B0"
+  "name": "점심",
+  "color": "#66BB6A"
+}
+
+### 태그 생성 - 지하철 (세부 태그)
+POST {{host}}/api/v1/card/tags
+Content-Type: application/json
+
+{
+  "name": "지하철",
+  "color": "#42A5F5",
+  "tagType": "DETAIL"
+}
+
+### 태그 생성 - 온라인쇼핑 (세부 태그)
+POST {{host}}/api/v1/card/tags
+Content-Type: application/json
+
+{
+  "name": "온라인쇼핑",
+  "color": "#FFA726",
+  "tagType": "DETAIL"
 }
 
 ### 전체 태그 조회
 GET {{host}}/api/v1/card/tags
 
-### 태그 수정 (ID=1)
+### 주요 태그만 조회
+GET {{host}}/api/v1/card/tags?tagType=MAIN
+
+### 세부 태그만 조회
+GET {{host}}/api/v1/card/tags?tagType=DETAIL
+
+### 태그 수정 (ID=1) - 이름/색상/유형 변경
 PUT {{host}}/api/v1/card/tags/1
 Content-Type: application/json
 
 {
   "name": "식비/카페",
-  "color": "#66BB6A"
+  "color": "#66BB6A",
+  "tagType": "MAIN"
 }
 
 ### 태그 삭제 (ID=1)
 DELETE {{host}}/api/v1/card/tags/1
 
-### 거래에 MAIN 태그 할당 (거래 ID=1, 태그 ID=1)
+### 거래에 태그 할당 (태그 유형은 태그 자체에서 자동 결정)
 POST {{host}}/api/v1/card/tags/transactions/1/tags
 Content-Type: application/json
 
 {
-  "tagId": 1,
-  "tagType": "MAIN"
+  "tagId": 1
 }
 
-### 거래에 DETAIL 태그 할당 (거래 ID=1, 태그 ID=2)
+### 거래에 세부 태그 할당 (태그 유형은 태그 자체에서 자동 결정)
 POST {{host}}/api/v1/card/tags/transactions/1/tags
 Content-Type: application/json
 
 {
-  "tagId": 2,
-  "tagType": "DETAIL"
-}
-
-### 거래에 DETAIL 태그 할당 - tagType 생략 시 기본값 DETAIL (거래 ID=1, 태그 ID=3)
-POST {{host}}/api/v1/card/tags/transactions/1/tags
-Content-Type: application/json
-
-{
-  "tagId": 3
+  "tagId": 4
 }
 
 ### 거래의 주요 태그 설정/변경 (거래 ID=1, 태그 ID=2를 MAIN으로)

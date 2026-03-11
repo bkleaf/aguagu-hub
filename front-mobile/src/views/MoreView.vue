@@ -42,6 +42,32 @@
       <v-divider />
 
       <v-list-item
+        prepend-icon="mdi-chart-donut"
+        title="태그 통계"
+        subtitle="주요 태그별 지출 통계 조회"
+        @click="$router.push('/tag-statistics')"
+      >
+        <template #append>
+          <v-icon>mdi-chevron-right</v-icon>
+        </template>
+      </v-list-item>
+
+      <v-divider />
+
+      <v-list-item
+        prepend-icon="mdi-calculator"
+        title="태그 금액 합산"
+        subtitle="선택 태그 합산 금액 및 월간 추이"
+        @click="$router.push('/tag-amount-summary')"
+      >
+        <template #append>
+          <v-icon>mdi-chevron-right</v-icon>
+        </template>
+      </v-list-item>
+
+      <v-divider />
+
+      <v-list-item
         prepend-icon="mdi-credit-card"
         title="카드 관리"
         subtitle="신용카드 등록, 조회, 삭제"

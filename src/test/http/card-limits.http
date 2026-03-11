@@ -40,8 +40,14 @@ Content-Type: application/json
   "limitAmount": 15000000
 }
 
-### 전체 한도 조회
+### 전체 한도 조회 (현재 기준)
 GET {{host}}/api/v1/card/limits
+
+### 전체 한도 조회 (년/월 지정 - 2026년 3월)
+GET {{host}}/api/v1/card/limits?year=2026&month=3
+
+### 전체 한도 조회 (년/월 지정 - 2026년 1월)
+GET {{host}}/api/v1/card/limits?year=2026&month=1
 
 ### 단건 한도 조회 (ID=1)
 GET {{host}}/api/v1/card/limits/1

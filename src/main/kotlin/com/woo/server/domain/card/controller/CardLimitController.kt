@@ -4,6 +4,7 @@ import com.woo.server.domain.card.dto.CardLimitRequest
 import com.woo.server.domain.card.dto.CardLimitResponse
 import com.woo.server.domain.card.service.CardLimitService
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -26,10 +27,24 @@ class CardLimitController(
         return ResponseEntity.status(HttpStatus.CREATED).body(result)
     }
 
-    @Operation(summary = "전체 한도 조회")
+    @Operation(summary = "전체 한도 조회", description = "year, month를 지정하면 해당 년/월 기준 사용액을 계산합니다. 미지정 시 현재 기준.")
     @GetMapping
-    fun getAll(): ResponseEntity<List<CardLimitResponse>> {
-        return ResponseEntity.ok(cardLimitService.getAll())
+    fun getAll(
+        @Parameter(description = "조회 기준 년도 (예: 2026)")
+        @RequestParam year: Int?,
+        @Parameter(description = "조회 기준 월 (1~12)")
+        @RequestParam month: Int?
+    ): ResponseEntity<List<CardLimitResponse>> {
+        // month 파라미터 범위 검증 (1~12)
+        if (month != null) {
+            require(month in 1..12) { "월은 1~12 사이의 값이어야 합니다: $month" }
+        }
+        val result = if (year != null && month != null) {
+            cardLimitService.getAllByYearMonth(year, month)
+        } else {
+            cardLimitService.getAll()
+        }
+        return ResponseEntity.ok(result)
     }
 
     @Operation(summary = "단건 한도 조회")

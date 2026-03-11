@@ -8,6 +8,8 @@ import MoreView from '../views/MoreView.vue'
 import AutoPaymentListView from '../views/AutoPaymentListView.vue'
 import MonthlyBillListView from '../views/MonthlyBillListView.vue'
 import TagListView from '../views/TagListView.vue'
+import TagStatisticsView from '../views/TagStatisticsView.vue'
+import TagAmountSummaryView from '../views/TagAmountSummaryView.vue'
 
 const routes = [
   { path: '/', name: 'dashboard', component: DashboardView, meta: { title: '대시보드' } },
@@ -19,6 +21,8 @@ const routes = [
   { path: '/auto-payments', name: 'autoPayments', component: AutoPaymentListView, meta: { title: '자동결제' } },
   { path: '/monthly-bills', name: 'monthlyBills', component: MonthlyBillListView, meta: { title: '월별 청구서' } },
   { path: '/tags', name: 'tags', component: TagListView, meta: { title: '태그 관리' } },
+  { path: '/tag-statistics', name: 'tagStatistics', component: TagStatisticsView, meta: { title: '태그 통계' } },
+  { path: '/tag-amount-summary', name: 'tagAmountSummary', component: TagAmountSummaryView, meta: { title: '태그 금액 합산' } },
 ]
 
 const router = createRouter({

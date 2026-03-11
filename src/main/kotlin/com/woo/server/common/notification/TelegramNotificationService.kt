@@ -50,6 +50,19 @@ class TelegramNotificationService(
     }
 
     /**
+     * 결제 취소 알림 전송
+     */
+    fun notifyCancellation(transaction: CardTransaction) {
+        if (!telegramProperties.enabled) {
+            log.debug("텔레그램 알림 비활성화 상태")
+            return
+        }
+
+        val message = buildCancelMessage(transaction)
+        sendMessage(message)
+    }
+
+    /**
      * 파싱 실패 알림 전송
      */
     fun notifyParseFailure(failure: CardParseFailure) {
@@ -110,6 +123,23 @@ class TelegramNotificationService(
             appendLine("결제일: $billingDate")
             appendLine("청구금액: $amount")
             appendLine("기준일: $referenceDate")
+        }
+    }
+
+    private fun buildCancelMessage(tx: CardTransaction): String {
+        val amount = numberFormat.format(tx.amount) + "원"
+        val date = tx.transactionDate.format(dateFormatter)
+
+        return buildString {
+            appendLine("❌ 카드 결제 취소")
+            appendLine("━━━━━━━━")
+            appendLine("카드사: ${tx.cardCompany.displayName}")
+            if (tx.cardLastFourDigits != null) {
+                appendLine("카드번호: ****${tx.cardLastFourDigits}")
+            }
+            appendLine("금액: $amount")
+            appendLine("사용처: ${tx.merchantName}")
+            appendLine("일시: $date")
         }
     }
 

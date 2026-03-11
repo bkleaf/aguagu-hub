@@ -6,6 +6,30 @@
       <v-btn value="failures" style="flex: 1">파싱 실패</v-btn>
     </v-btn-toggle>
 
+    <!-- 기간 필터 -->
+    <v-card v-if="tab === 'transactions'" variant="outlined" class="mb-3 pa-2">
+      <div class="d-flex align-center ga-2">
+        <v-text-field
+          v-model="startDate"
+          label="시작일"
+          type="date"
+          density="compact"
+          hide-details
+          style="flex: 1"
+        />
+        <span class="text-body-2">~</span>
+        <v-text-field
+          v-model="endDate"
+          label="종료일"
+          type="date"
+          density="compact"
+          hide-details
+          style="flex: 1"
+        />
+        <v-btn color="primary" size="small" variant="outlined" @click="loadTransactions">조회</v-btn>
+      </div>
+    </v-card>
+
     <!-- 카드 필터 -->
     <v-select
       v-if="tab === 'transactions'"
@@ -17,6 +41,29 @@
       hide-details
       class="mb-3"
     />
+
+    <!-- 태그 필터 -->
+    <v-select
+      v-if="tab === 'transactions'"
+      v-model="selectedTagFilter"
+      :items="tagFilterItems"
+      label="태그 필터"
+      clearable
+      density="compact"
+      hide-details
+      class="mb-3"
+    />
+
+    <!-- 사용금액 합계 -->
+    <v-chip
+      v-if="tab === 'transactions' && filteredTransactions.length > 0"
+      color="primary"
+      variant="tonal"
+      class="mb-3"
+      block
+    >
+      합계: {{ formatAmount(totalAmount) }} ({{ filteredTransactions.length }}건)
+    </v-chip>
 
     <!-- 로딩 -->
     <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-2" />
@@ -57,7 +104,14 @@
                 </v-chip>
               </div>
             </div>
-            <div class="text-body-1 font-weight-bold ml-2 text-no-wrap">{{ formatAmount(tx.amount) }}</div>
+            <div class="ml-2 text-no-wrap text-right">
+              <span class="text-body-1 font-weight-bold" :class="{ 'text-decoration-line-through text-grey': tx.cancelled }">
+                {{ formatAmount(tx.amount) }}
+              </span>
+              <div v-if="tx.cancelled">
+                <v-chip color="red" size="x-small" variant="flat">취소</v-chip>
+              </div>
+            </div>
           </div>
         </v-card-text>
       </v-card>
@@ -193,16 +247,18 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   fetchTransactions, fetchParseFailures, fetchCreditCards,
   fetchTags, addTagToTransaction, removeTagFromTransaction, setMainTag
 } from '../api'
 
 const route = useRoute()
+const router = useRouter()
 
 const tab = ref('transactions')
 const selectedCard = ref(null)
+const selectedTagFilter = ref(null)
 const loading = ref(false)
 const transactions = ref([])
 const failures = ref([])
@@ -216,6 +272,11 @@ const tagToAdd = ref(null)
 const mainTagToSet = ref(null)
 const snackbar = ref({ show: false, text: '', color: '' })
 
+/** 기간 필터: 기본값은 이번 달 1일 ~ 말일 */
+const now = new Date()
+const startDate = ref(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10))
+const endDate = ref(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10))
+
 /** 등록된 카드 기반 필터 항목 (카드사명 + 끝4자리) */
 const cardItems = computed(() =>
   creditCards.value.map(c => ({
@@ -224,32 +285,72 @@ const cardItems = computed(() =>
   }))
 )
 
-/** 카드별 필터링된 거래 */
+/** 태그 필터 항목 */
+const tagFilterItems = computed(() =>
+  allTags.value.map(t => ({
+    title: t.name,
+    value: t.id
+  }))
+)
+
+/** 필터링된 거래의 사용금액 총합 (취소 건 제외) */
+const totalAmount = computed(() =>
+  filteredTransactions.value
+    .filter(tx => !tx.cancelled)
+    .reduce((sum, tx) => sum + Number(tx.amount), 0)
+)
+
+/** 카드별·태그별 필터링된 거래 */
 const filteredTransactions = computed(() => {
-  if (!selectedCard.value) return transactions.value
-  const card = creditCards.value.find(c => c.id === selectedCard.value)
-  if (!card) return transactions.value
-  return transactions.value.filter(t =>
-    t.cardCompany === card.cardCompany && t.cardLastFourDigits === card.lastFourDigits
-  )
+  let result = transactions.value
+
+  if (selectedCard.value) {
+    const card = creditCards.value.find(c => c.id === selectedCard.value)
+    if (card) {
+      result = result.filter(t =>
+        t.cardCompany === card.cardCompany && t.cardLastFourDigits === card.lastFourDigits
+      )
+    }
+  }
+
+  if (selectedTagFilter.value) {
+    result = result.filter(t =>
+      t.tags && t.tags.some(tag => tag.id === selectedTagFilter.value)
+    )
+  }
+
+  return result
 })
 
-/** 선택된 거래에 아직 할당되지 않은 태그 (세부 태그 추가용) */
+/** MAIN 유형 태그 목록 */
+const mainTagList = computed(() => allTags.value.filter(t => t.tagType === 'MAIN'))
+
+/** DETAIL 유형 태그 목록 */
+const detailTagList = computed(() => allTags.value.filter(t => t.tagType === 'DETAIL'))
+
+/** "태그 생성" 이동 항목 값 */
+const CREATE_TAG_VALUE = '__create_tag__'
+
+/** 선택된 거래에 아직 할당되지 않은 DETAIL 태그 (세부 태그 추가용) + "태그 생성" 항목 */
 const availableTagsForSelected = computed(() => {
   if (!selectedTransaction.value) return []
   const assignedIds = (selectedTransaction.value.tags || []).map(t => t.id)
-  return allTags.value
+  const items = detailTagList.value
     .filter(t => !assignedIds.includes(t.id))
     .map(t => ({ title: t.name, value: t.id }))
+  items.push({ title: '+ 태그 생성', value: CREATE_TAG_VALUE })
+  return items
 })
 
-/** 주요 태그 설정용 옵션 */
+/** 주요 태그 설정용 옵션 (MAIN 유형 태그만) + "태그 생성" 항목 */
 const mainTagOptions = computed(() => {
   if (!selectedTransaction.value) return []
   const mainTagId = selectedTransaction.value.mainTag?.id
-  return allTags.value
+  const items = mainTagList.value
     .filter(t => t.id !== mainTagId)
     .map(t => ({ title: t.name, value: t.id }))
+  items.push({ title: '+ 태그 생성', value: CREATE_TAG_VALUE })
+  return items
 })
 
 /** 금액 포맷 */
@@ -272,8 +373,13 @@ function openFailureDetail(f) {
 /** 거래에 세부 태그 추가 */
 async function addTag(tagId) {
   if (!tagId || !selectedTransaction.value) return
+  if (tagId === CREATE_TAG_VALUE) {
+    tagToAdd.value = null
+    router.push('/tags')
+    return
+  }
   try {
-    const res = await addTagToTransaction(selectedTransaction.value.id, tagId, 'DETAIL')
+    const res = await addTagToTransaction(selectedTransaction.value.id, tagId)
     const tagData = res.data
     if (tagData) {
       if (!selectedTransaction.value.tags) selectedTransaction.value.tags = []
@@ -291,6 +397,11 @@ async function addTag(tagId) {
 /** 주요 태그 변경 */
 async function changeMainTag(tagId) {
   if (!tagId || !selectedTransaction.value) return
+  if (tagId === CREATE_TAG_VALUE) {
+    mainTagToSet.value = null
+    router.push('/tags')
+    return
+  }
   try {
     await setMainTag(selectedTransaction.value.id, tagId)
     await refreshSelectedTransaction()
@@ -327,7 +438,7 @@ async function refreshSelectedTransaction() {
 async function loadTransactions() {
   loading.value = true
   try {
-    const res = await fetchTransactions()
+    const res = await fetchTransactions(startDate.value, endDate.value)
     transactions.value = res.data
   } catch (e) {
     console.error('거래 목록 로딩 실패', e)
@@ -370,7 +481,7 @@ onMounted(async () => {
     tab.value = 'failures'
   }
   if (route.query.card) {
-    selectedCard.value = route.query.card
+    selectedCard.value = Number(route.query.card)
   }
 
   load()

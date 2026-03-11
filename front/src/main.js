@@ -8,7 +8,7 @@ import '@mdi/font/css/materialdesignicons.css'
 /* ECharts tree-shaking 방식 등록 */
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart } from 'echarts/charts'
+import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import {
   TitleComponent,
   TooltipComponent,
@@ -23,6 +23,7 @@ use([
   CanvasRenderer,
   BarChart,
   LineChart,
+  PieChart,
   TitleComponent,
   TooltipComponent,
   LegendComponent,

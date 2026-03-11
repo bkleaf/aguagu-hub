@@ -39,25 +39,58 @@ interface CardTransactionRepository : JpaRepository<CardTransaction, Long> {
     ): List<CardTransaction>
 
     /**
+     * 특정 기간 내의 거래 내역을 거래일시 내림차순으로 조회합니다.
+     *
+     * @param startDate 시작 일시
+     * @param endDate 종료 일시
+     * @return 해당 기간의 거래 내역 목록 (거래일시 내림차순)
+     */
+    fun findByTransactionDateBetweenOrderByTransactionDateDesc(
+        startDate: LocalDateTime,
+        endDate: LocalDateTime
+    ): List<CardTransaction>
+
+    /**
      * 중복 거래 확인을 위한 조회
      *
-     * 동일한 카드사, 금액, 거래일시, 사용처를 가진 거래가 있는지 확인합니다.
+     * 동일한 카드사, 카드 끝4자리, 금액, 거래일시, 사용처를 가진 거래가 있는지 확인합니다.
      *
      * @param cardCompany 카드사
+     * @param cardLastFourDigits 카드 끝4자리
      * @param amount 금액
      * @param transactionDate 거래 일시
      * @param merchantName 사용처
      * @return 중복 거래 존재 여부
      */
-    fun existsByCardCompanyAndAmountAndTransactionDateAndMerchantName(
+    fun existsByCardCompanyAndCardLastFourDigitsAndAmountAndTransactionDateAndMerchantName(
         cardCompany: CardCompany,
+        cardLastFourDigits: String?,
         amount: BigDecimal,
         transactionDate: LocalDateTime,
         merchantName: String
     ): Boolean
 
     /**
-     * 특정 기간 내 총 사용 금액을 조회합니다.
+     * 취소 매칭을 위한 원본 거래 조회
+     *
+     * 동일한 카드사, 카드 끝4자리, 금액, 사용처를 가진
+     * 취소되지 않은 거래를 최근순으로 조회합니다.
+     *
+     * @param cardCompany 카드사
+     * @param cardLastFourDigits 카드 끝4자리
+     * @param amount 금액
+     * @param merchantName 사용처
+     * @return 매칭된 원본 거래 (없으면 null)
+     */
+    fun findFirstByCardCompanyAndCardLastFourDigitsAndAmountAndMerchantNameAndCancelledFalseOrderByTransactionDateDesc(
+        cardCompany: CardCompany,
+        cardLastFourDigits: String,
+        amount: BigDecimal,
+        merchantName: String
+    ): CardTransaction?
+
+    /**
+     * 특정 기간 내 총 사용 금액을 조회합니다 (취소 건 제외).
      *
      * @param startDate 시작 일시
      * @param endDate 종료 일시
@@ -67,6 +100,7 @@ interface CardTransactionRepository : JpaRepository<CardTransaction, Long> {
         SELECT COALESCE(SUM(ct.amount), 0)
         FROM CardTransaction ct
         WHERE ct.transactionDate BETWEEN :startDate AND :endDate
+        AND ct.cancelled = false
     """)
     fun sumAmountByTransactionDateBetween(
         @Param("startDate") startDate: LocalDateTime,
@@ -93,6 +127,7 @@ interface CardTransactionRepository : JpaRepository<CardTransaction, Long> {
         WHERE ct.cardCompany = :cardCompany
         AND ct.cardLastFourDigits = :cardLastFourDigits
         AND ct.transactionDate BETWEEN :startDate AND :endDate
+        AND ct.cancelled = false
     """)
     fun sumAmountByCardAndPeriod(
         @Param("cardCompany") cardCompany: CardCompany,
@@ -113,6 +148,7 @@ interface CardTransactionRepository : JpaRepository<CardTransaction, Long> {
         WHERE ct.cardCompany = :cardCompany
         AND ct.cardLastFourDigits IN :variants
         AND ct.transactionDate BETWEEN :startDate AND :endDate
+        AND ct.cancelled = false
     """)
     fun sumAmountByCardAndPeriodWithVariants(
         @Param("cardCompany") cardCompany: CardCompany,
@@ -131,6 +167,7 @@ interface CardTransactionRepository : JpaRepository<CardTransaction, Long> {
             SELECT COALESCE(SUM(ct.amount), 0)
             FROM aguagu.card_transactions ct
             WHERE ct.transaction_date BETWEEN :startDate AND :endDate
+            AND ct.cancelled = false
             AND NOT EXISTS (
                 SELECT 1 FROM aguagu.transaction_tags tt WHERE tt.transaction_id = ct.id
             )
@@ -152,6 +189,7 @@ interface CardTransactionRepository : JpaRepository<CardTransaction, Long> {
             SELECT COUNT(ct.id)
             FROM aguagu.card_transactions ct
             WHERE ct.transaction_date BETWEEN :startDate AND :endDate
+            AND ct.cancelled = false
             AND NOT EXISTS (
                 SELECT 1 FROM aguagu.transaction_tags tt WHERE tt.transaction_id = ct.id
             )

@@ -1,5 +1,6 @@
 package com.woo.server.domain.card.entity
 
+import com.woo.server.common.enums.TagType
 import jakarta.persistence.*
 import java.time.LocalDateTime
 
@@ -7,7 +8,7 @@ import java.time.LocalDateTime
  * 태그 엔티티
  *
  * 거래 내역에 부여할 수 있는 분류 태그입니다.
- * 이름과 색상(hex)을 가지며, 하나의 거래에 여러 태그를 부여할 수 있습니다 (N:M).
+ * 이름과 색상(hex), 유형(MAIN/DETAIL)을 가지며, 하나의 거래에 여러 태그를 부여할 수 있습니다 (N:M).
  */
 @Entity
 @Table(name = "tags", schema = "aguagu")
@@ -24,6 +25,11 @@ class Tag(
     /** 태그 색상 (hex, 예: #2196F3) */
     @Column(nullable = false, length = 7)
     var color: String = "#2196F3",
+
+    /** 태그 유형 (MAIN: 주요, DETAIL: 세부) */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tag_type", nullable = false, length = 10)
+    var tagType: TagType = TagType.DETAIL,
 
     /** 생성 일시 */
     @Column(nullable = false, updatable = false)

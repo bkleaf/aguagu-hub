@@ -35,6 +35,8 @@ data class CardTransactionResponse(
     val accumulatedAmount: BigDecimal?,
     @Schema(description = "생성 일시", example = "2025-01-15T17:52:30")
     val createdAt: LocalDateTime,
+    @Schema(description = "취소 여부")
+    val cancelled: Boolean = false,
     @Schema(description = "주요 태그 (MAIN, 최대 1개)")
     val mainTag: TransactionTagResponse? = null,
     @Schema(description = "세부 태그 목록 (DETAIL)")
@@ -64,6 +66,7 @@ data class CardTransactionResponse(
                 merchantName = entity.merchantName,
                 accumulatedAmount = entity.accumulatedAmount,
                 createdAt = entity.createdAt,
+                cancelled = entity.cancelled,
                 mainTag = mainTag,
                 detailTags = detailTags,
                 tags = tags
@@ -107,6 +110,30 @@ data class CardMessageProcessResponse(
                 message = "문자 파싱에 실패했지만 원본 메시지가 저장되었습니다",
                 transaction = null,
                 parseFailure = failure
+            )
+        }
+
+        /**
+         * 취소 처리 성공 응답 생성 (원본 거래 취소 표시)
+         */
+        fun cancelSuccess(transaction: CardTransactionResponse): CardMessageProcessResponse {
+            return CardMessageProcessResponse(
+                success = true,
+                message = "결제 취소가 성공적으로 처리되었습니다",
+                transaction = transaction,
+                parseFailure = null
+            )
+        }
+
+        /**
+         * 취소 처리 응답 생성 (원본 미매칭, 취소 거래 별도 저장)
+         */
+        fun cancelUnmatched(transaction: CardTransactionResponse): CardMessageProcessResponse {
+            return CardMessageProcessResponse(
+                success = true,
+                message = "원본 거래를 찾을 수 없어 취소 거래가 별도 저장되었습니다",
+                transaction = transaction,
+                parseFailure = null
             )
         }
 

@@ -32,7 +32,7 @@ class TagService(
     /**
      * 태그를 생성합니다.
      *
-     * @param request 태그 생성 요청
+     * @param request 태그 생성 요청 (tagType 포함)
      * @return 생성된 태그 응답
      * @throws IllegalArgumentException 이름이 중복된 경우
      */
@@ -43,16 +43,27 @@ class TagService(
         }
         val tag = Tag(
             name = request.name,
-            color = request.color
+            color = request.color,
+            tagType = request.tagType
         )
         val saved = tagRepository.save(tag)
-        log.info("태그 생성 완료: ID=${saved.id}, name=${saved.name}")
+        log.info("태그 생성 완료: ID=${saved.id}, name=${saved.name}, tagType=${saved.tagType}")
         return TagResponse.from(saved)
     }
 
-    /** 전체 태그를 조회합니다. */
-    fun getAll(): List<TagResponse> {
-        return tagRepository.findAll().map { TagResponse.from(it) }
+    /**
+     * 태그를 조회합니다.
+     *
+     * @param tagType 태그 유형 필터 (null이면 전체)
+     * @return 태그 목록
+     */
+    fun getAll(tagType: TagType? = null): List<TagResponse> {
+        val tags = if (tagType != null) {
+            tagRepository.findByTagType(tagType)
+        } else {
+            tagRepository.findAll()
+        }
+        return tags.map { TagResponse.from(it) }
     }
 
     /** 단건 태그를 조회합니다. */
@@ -83,6 +94,7 @@ class TagService(
 
         tag.name = request.name
         tag.color = request.color
+        tag.tagType = request.tagType
         tag.updatedAt = LocalDateTime.now()
 
         val saved = tagRepository.save(tag)
@@ -110,16 +122,16 @@ class TagService(
 
     /**
      * 거래에 태그를 할당합니다.
+     * 태그 유형은 태그 자체의 tagType에서 자동으로 결정됩니다.
      *
      * @param transactionId 거래 ID
      * @param tagId 태그 ID
-     * @param tagType 태그 유형 (MAIN/DETAIL, 기본값: DETAIL)
      * @return 할당된 태그 응답
      * @throws IllegalArgumentException 거래 또는 태그가 없는 경우
      * @throws IllegalStateException 이미 할당된 경우 또는 MAIN 태그가 이미 존재하는 경우
      */
     @Transactional
-    fun addTagToTransaction(transactionId: Long, tagId: Long, tagType: TagType = TagType.DETAIL): TransactionTagResponse {
+    fun addTagToTransaction(transactionId: Long, tagId: Long): TransactionTagResponse {
         val transaction = cardTransactionRepository.findById(transactionId)
             .orElseThrow { IllegalArgumentException("거래를 찾을 수 없습니다: ID=$transactionId") }
         val tag = tagRepository.findById(tagId)
@@ -128,6 +140,9 @@ class TagService(
         if (transactionTagRepository.existsByTransactionIdAndTagId(transactionId, tagId)) {
             throw IllegalStateException("이미 할당된 태그입니다")
         }
+
+        /** 태그 자체의 유형을 사용 */
+        val tagType = tag.tagType
 
         // MAIN 태그 중복 방지
         if (tagType == TagType.MAIN && transactionTagRepository.existsByTransactionIdAndTagType(transactionId, TagType.MAIN)) {

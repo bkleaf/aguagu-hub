@@ -63,6 +63,7 @@ interface TransactionTagRepository : JpaRepository<TransactionTag, Long> {
                COUNT(tt.transaction.id)
         FROM TransactionTag tt
         WHERE tt.transaction.transactionDate BETWEEN :startDate AND :endDate
+        AND tt.transaction.cancelled = false
         GROUP BY tt.tag.id, tt.tag.name, tt.tag.color
         ORDER BY COALESCE(SUM(tt.transaction.amount), 0) DESC
     """)
@@ -82,6 +83,7 @@ interface TransactionTagRepository : JpaRepository<TransactionTag, Long> {
                COUNT(tt.transaction.id)
         FROM TransactionTag tt
         WHERE tt.transaction.transactionDate BETWEEN :startDate AND :endDate
+        AND tt.transaction.cancelled = false
         AND tt.tagType = :tagType
         GROUP BY tt.tag.id, tt.tag.name, tt.tag.color
         ORDER BY COALESCE(SUM(tt.transaction.amount), 0) DESC
@@ -106,6 +108,7 @@ interface TransactionTagRepository : JpaRepository<TransactionTag, Long> {
             JOIN aguagu.tags t ON tt.tag_id = t.id
             JOIN aguagu.card_transactions ct ON tt.transaction_id = ct.id
             WHERE ct.transaction_date BETWEEN :startDate AND :endDate
+            AND ct.cancelled = false
             GROUP BY t.id, t.name, t.color, TO_CHAR(ct.transaction_date, 'YYYY-MM')
             ORDER BY t.id, year_month
         """,
@@ -130,6 +133,7 @@ interface TransactionTagRepository : JpaRepository<TransactionTag, Long> {
             JOIN aguagu.tags t ON tt.tag_id = t.id
             JOIN aguagu.card_transactions ct ON tt.transaction_id = ct.id
             WHERE ct.transaction_date BETWEEN :startDate AND :endDate
+            AND ct.cancelled = false
             AND tt.tag_type = :tagType
             GROUP BY t.id, t.name, t.color, TO_CHAR(ct.transaction_date, 'YYYY-MM')
             ORDER BY t.id, year_month
@@ -153,6 +157,7 @@ interface TransactionTagRepository : JpaRepository<TransactionTag, Long> {
                COUNT(tt.transaction.id)
         FROM TransactionTag tt
         WHERE tt.transaction.transactionDate BETWEEN :startDate AND :endDate
+        AND tt.transaction.cancelled = false
         AND tt.tagType = :tagType
         AND tt.tag.id IN :tagIds
         GROUP BY tt.tag.id, tt.tag.name, tt.tag.color
@@ -179,6 +184,7 @@ interface TransactionTagRepository : JpaRepository<TransactionTag, Long> {
             JOIN aguagu.tags t ON tt.tag_id = t.id
             JOIN aguagu.card_transactions ct ON tt.transaction_id = ct.id
             WHERE ct.transaction_date BETWEEN :startDate AND :endDate
+            AND ct.cancelled = false
             AND tt.tag_type = :tagType
             AND t.id IN (:tagIds)
             GROUP BY t.id, t.name, t.color, TO_CHAR(ct.transaction_date, 'YYYY-MM')

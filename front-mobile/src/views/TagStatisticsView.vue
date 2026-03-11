@@ -1,43 +1,45 @@
 <template>
   <div>
-    <!-- 기간 선택 툴바 -->
-    <v-card class="mb-4">
-      <v-card-text>
-        <v-row align="center" dense>
-          <v-col cols="12" sm="auto">
-            <v-btn-toggle v-model="selectedPreset" mandatory density="compact" color="primary">
-              <v-btn v-for="preset in presets" :key="preset.value" :value="preset.value" size="small">
-                {{ preset.label }}
-              </v-btn>
-            </v-btn-toggle>
-          </v-col>
-          <v-col cols="12" sm="auto" class="d-flex align-center ga-2">
-            <v-text-field
-              v-model="startDate"
-              type="date"
-              label="시작일"
-              density="compact"
-              hide-details
-              style="max-width: 180px"
-              @change="selectedPreset = 'custom'"
-            />
-            <span class="text-grey">~</span>
-            <v-text-field
-              v-model="endDate"
-              type="date"
-              label="종료일"
-              density="compact"
-              hide-details
-              style="max-width: 180px"
-              @change="selectedPreset = 'custom'"
-            />
-          </v-col>
-          <v-col cols="auto">
-            <v-btn color="primary" variant="tonal" @click="loadData" :loading="loading">
-              조회
-            </v-btn>
-          </v-col>
-        </v-row>
+    <!-- 기간 선택 -->
+    <v-card class="mb-3">
+      <v-card-text class="pb-2">
+        <!-- 기간 프리셋 (가로 스크롤) -->
+        <div class="d-flex ga-1 mb-3" style="overflow-x: auto; white-space: nowrap;">
+          <v-chip
+            v-for="preset in presets"
+            :key="preset.value"
+            :color="selectedPreset === preset.value ? 'primary' : undefined"
+            :variant="selectedPreset === preset.value ? 'flat' : 'outlined'"
+            size="small"
+            @click="selectedPreset = preset.value"
+          >
+            {{ preset.label }}
+          </v-chip>
+        </div>
+
+        <!-- 시작일/종료일 -->
+        <v-text-field
+          v-model="startDate"
+          type="date"
+          label="시작일"
+          density="compact"
+          hide-details
+          class="mb-2"
+          @change="selectedPreset = 'custom'"
+        />
+        <v-text-field
+          v-model="endDate"
+          type="date"
+          label="종료일"
+          density="compact"
+          hide-details
+          class="mb-2"
+          @change="selectedPreset = 'custom'"
+        />
+
+        <v-btn color="primary" variant="tonal" block @click="loadData" :loading="loading">
+          조회
+        </v-btn>
       </v-card-text>
     </v-card>
 
@@ -47,15 +49,15 @@
     </div>
 
     <template v-else-if="summaryData">
-      <!-- Nightingale Rose Chart -->
+      <!-- Nightingale Rose 차트 -->
       <v-card>
-        <v-card-title>주요 태그별 지출 금액</v-card-title>
+        <v-card-title class="text-body-1 font-weight-bold py-2">주요 태그별 지출 금액</v-card-title>
         <v-card-text>
           <v-chart
             v-if="chartOption"
             :option="chartOption"
             autoresize
-            style="height: 480px"
+            style="height: 380px"
           />
           <div v-else class="text-center text-grey pa-8">데이터가 없습니다</div>
           <div class="text-caption text-grey mt-2">
@@ -81,7 +83,6 @@ import { fetchTagStatisticsSummary } from '../api'
 const loading = ref(false)
 const summaryData = ref(null)
 
-// 기간 선택
 const startDate = ref('')
 const endDate = ref('')
 const selectedPreset = ref('thisMonth')
@@ -104,29 +105,28 @@ watch(selectedPreset, (val) => {
 
   switch (val) {
     case 'thisMonth':
-      startDate.value = formatDate(new Date(y, m, 1))
-      endDate.value = formatDate(new Date(y, m + 1, 0))
+      startDate.value = formatDateStr(new Date(y, m, 1))
+      endDate.value = formatDateStr(new Date(y, m + 1, 0))
       break
     case 'lastMonth':
-      startDate.value = formatDate(new Date(y, m - 1, 1))
-      endDate.value = formatDate(new Date(y, m, 0))
+      startDate.value = formatDateStr(new Date(y, m - 1, 1))
+      endDate.value = formatDateStr(new Date(y, m, 0))
       break
     case '3months':
-      startDate.value = formatDate(new Date(y, m - 2, 1))
-      endDate.value = formatDate(new Date(y, m + 1, 0))
+      startDate.value = formatDateStr(new Date(y, m - 2, 1))
+      endDate.value = formatDateStr(new Date(y, m + 1, 0))
       break
     case '6months':
-      startDate.value = formatDate(new Date(y, m - 5, 1))
-      endDate.value = formatDate(new Date(y, m + 1, 0))
+      startDate.value = formatDateStr(new Date(y, m - 5, 1))
+      endDate.value = formatDateStr(new Date(y, m + 1, 0))
       break
     case 'thisYear':
-      startDate.value = formatDate(new Date(y, 0, 1))
-      endDate.value = formatDate(new Date(y, 11, 31))
+      startDate.value = formatDateStr(new Date(y, 0, 1))
+      endDate.value = formatDateStr(new Date(y, 11, 31))
       break
   }
 }, { immediate: true })
 
-// ECharts 옵션
 const chartOption = ref(null)
 
 /** 금액 포맷팅 (원 단위 3자리 콤마) */
@@ -135,7 +135,7 @@ function formatAmount(v) {
 }
 
 /** Date 객체를 yyyy-MM-dd 형식 문자열로 변환합니다. */
-function formatDate(d) {
+function formatDateStr(d) {
   const yyyy = d.getFullYear()
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
@@ -190,7 +190,8 @@ function buildRoseChart(data) {
     },
     legend: {
       bottom: 0,
-      left: 'center'
+      left: 'center',
+      textStyle: { fontSize: 11 }
     },
     series: [
       {
@@ -209,7 +210,7 @@ function buildRoseChart(data) {
             }
             return `${params.name}\n${params.value.toLocaleString()}원`
           },
-          fontSize: 12
+          fontSize: 11
         },
         data: seriesData
       }

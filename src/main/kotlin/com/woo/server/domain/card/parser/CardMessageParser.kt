@@ -29,7 +29,10 @@ data class ParseResult(
     val cardLastFourDigits: String? = null,
 
     /** 파싱 실패 사유 */
-    val failReason: String? = null
+    val failReason: String? = null,
+
+    /** 취소 문자 여부 */
+    val cancelled: Boolean = false
 ) {
     companion object {
         /**
@@ -40,7 +43,8 @@ data class ParseResult(
             transactionDate: LocalDateTime,
             merchantName: String,
             accumulatedAmount: BigDecimal? = null,
-            cardLastFourDigits: String? = null
+            cardLastFourDigits: String? = null,
+            cancelled: Boolean = false
         ): ParseResult {
             return ParseResult(
                 success = true,
@@ -48,7 +52,8 @@ data class ParseResult(
                 transactionDate = transactionDate,
                 merchantName = merchantName,
                 accumulatedAmount = accumulatedAmount,
-                cardLastFourDigits = cardLastFourDigits
+                cardLastFourDigits = cardLastFourDigits,
+                cancelled = cancelled
             )
         }
 

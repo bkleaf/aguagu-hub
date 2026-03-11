@@ -121,12 +121,12 @@ class CardUsageSummaryService(
                 val year = LocalDate.now().year
                 Pair(
                     LocalDate.of(year, 1, 1).atStartOfDay(),
-                    LocalDate.of(year, 12, 31).atTime(23, 59, 59)
+                    LocalDate.of(year, 12, 31).atTime(23, 59, 59, 999_999_999)
                 )
             }
             LimitType.CUSTOM -> Pair(
                 cardLimit.customStartDate!!.atStartOfDay(),
-                cardLimit.customEndDate!!.atTime(23, 59, 59)
+                cardLimit.customEndDate!!.atTime(23, 59, 59, 999_999_999)
             )
         }
     }

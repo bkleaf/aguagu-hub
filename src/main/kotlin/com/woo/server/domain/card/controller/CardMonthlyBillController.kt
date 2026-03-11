@@ -42,6 +42,8 @@ class CardMonthlyBillController(
         @Parameter(description = "월", example = "2") @RequestParam month: Int,
         @Parameter(description = "카드사 코드 (선택)", example = "SAMSUNG") @RequestParam(required = false) cardCompany: CardCompany?
     ): ResponseEntity<CardMonthlyBillListResponse> {
+        // month 파라미터 범위 검증 (1~12)
+        require(month in 1..12) { "월은 1~12 사이의 값이어야 합니다: $month" }
         val result = cardMonthlyBillService.getBillsByMonth(year, month, cardCompany)
         return ResponseEntity.ok(result)
     }

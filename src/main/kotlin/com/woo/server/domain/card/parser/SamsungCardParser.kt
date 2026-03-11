@@ -10,7 +10,7 @@ import java.time.Year
  * 삼성카드 문자 메시지 파서
  *
  * 삼성카드의 결제 승인 문자를 파싱하여 거래 정보를 추출합니다.
- * 개인카드, 법인카드, 후불교통 세 가지 형식을 지원합니다.
+ * 개인카드, 법인카드, 후불교통, 자동결제 네 가지 형식을 지원합니다.
  *
  * 형식 1 (법인카드):
  * ```
@@ -34,6 +34,14 @@ import java.time.Year
  * 02월접수 후불교통
  * (버스+지하철+통행료)
  * 합계 74,320원
+ * ```
+ *
+ * 형식 4 (자동결제):
+ * ```
+ * [삼성카드]6518
+ * 자동결제 02/24접수
+ * 아파트관리비
+ * 159,710원
  * ```
  */
 @Component
@@ -71,6 +79,22 @@ class SamsungCardParser : CardMessageParser {
 
         /** 후불교통 사용처 추출 (예: "02월접수 후불교통") */
         private val POSTPAID_MERCHANT_PATTERN = Regex("""(\d{2}월접수\s*후불교통)""")
+
+        // === 자동결제 형식 정규식 ===
+
+        /** 자동결제 날짜 추출 (예: "자동결제 02/24접수") */
+        private val AUTO_PAYMENT_DATE_PATTERN = Regex("""자동결제\s+(\d{1,2})/(\d{1,2})접수""")
+
+        // === 취소 형식 정규식 ===
+
+        /** 취소 카드번호 추출 (예: "[삼성카드]6518취소") */
+        private val CANCEL_CARD_PATTERN = Regex("""\[삼성카드\](\d{4})취소""")
+
+        /** 취소 날짜 + 사용처 추출 (예: "02/18 네이버페이") */
+        private val CANCEL_DATE_MERCHANT_PATTERN = Regex("""(\d{1,2})/(\d{1,2})\s+(.+)""")
+
+        /** 취소 금액 추출 (예: "-51,840원") */
+        private val CANCEL_AMOUNT_PATTERN = Regex("""-([0-9,]+)원""")
     }
 
     /**
@@ -81,7 +105,7 @@ class SamsungCardParser : CardMessageParser {
     /**
      * 메시지가 삼성카드 문자인지 확인
      *
-     * "승인", "법인", "후불교통" 키워드가 포함된 삼성카드 문자를 식별한다.
+     * "승인", "법인", "후불교통", "자동결제", "취소" 키워드가 포함된 삼성카드 문자를 식별한다.
      *
      * @param message 문자 메시지
      * @return 삼성카드 문자 여부
@@ -92,7 +116,9 @@ class SamsungCardParser : CardMessageParser {
         }
         val isApproval = message.contains("승인") || message.contains("법인")
         val isPostpaidTransport = message.contains("후불교통")
-        return hasSamsungKeyword && (isApproval || isPostpaidTransport)
+        val isAutoPayment = message.contains("자동결제")
+        val isCancel = CANCEL_CARD_PATTERN.containsMatchIn(message)
+        return hasSamsungKeyword && (isApproval || isPostpaidTransport || isAutoPayment || isCancel)
     }
 
     /**
@@ -103,14 +129,76 @@ class SamsungCardParser : CardMessageParser {
      */
     override fun parse(message: String): ParseResult {
         return try {
-            if (message.contains("후불교통")) {
+            if (CANCEL_CARD_PATTERN.containsMatchIn(message)) {
+                parseCancel(message)
+            } else if (message.contains("후불교통")) {
                 parsePostpaidTransport(message)
+            } else if (message.contains("자동결제")) {
+                parseAutoPayment(message)
             } else {
                 parseApproval(message)
             }
         } catch (e: Exception) {
             ParseResult.failure("파싱 중 오류 발생: ${e.message}")
         }
+    }
+
+    /**
+     * 취소 문자 파싱
+     *
+     * 형식:
+     * ```
+     * [Web발신]
+     * [삼성카드]6518취소
+     * 02/18 네이버페이
+     * -51,840원
+     * q.scqr.kr/4BIelK6
+     * ```
+     */
+    private fun parseCancel(message: String): ParseResult {
+        // 카드 끝4자리 추출 ([삼성카드]XXXX취소)
+        val cardLastFourDigits = CANCEL_CARD_PATTERN.find(message)?.groupValues?.get(1)
+            ?: return ParseResult.failure("취소 카드번호를 추출할 수 없습니다")
+
+        // 금액 추출 (-XX,XXX원)
+        val amount = CANCEL_AMOUNT_PATTERN.find(message)?.let {
+            parseDecimal(it.groupValues[1])
+        } ?: return ParseResult.failure("취소 금액을 추출할 수 없습니다")
+
+        // 날짜 + 사용처 추출 (MM/DD 사용처)
+        val lines = message.split("\n", "\r\n").map { it.trim() }.filter { it.isNotEmpty() }
+        var transactionDate: LocalDateTime? = null
+        var merchantName: String? = null
+
+        for (line in lines) {
+            val match = CANCEL_DATE_MERCHANT_PATTERN.find(line)
+            if (match != null && !line.contains("취소") && !line.contains("삼성카드")) {
+                val month = match.groupValues[1].toInt()
+                val day = match.groupValues[2].toInt()
+                merchantName = match.groupValues[3].trim()
+
+                val today = java.time.LocalDate.now()
+                var year = today.year
+                val date = java.time.LocalDate.of(year, month, day)
+                if (date.isAfter(today.plusMonths(6))) {
+                    year -= 1
+                }
+                transactionDate = LocalDateTime.of(year, month, day, 0, 0)
+                break
+            }
+        }
+
+        if (transactionDate == null) return ParseResult.failure("취소 거래 일시를 추출할 수 없습니다")
+        if (merchantName == null) return ParseResult.failure("취소 사용처를 추출할 수 없습니다")
+
+        return ParseResult.success(
+            amount = amount,
+            transactionDate = transactionDate,
+            merchantName = merchantName,
+            accumulatedAmount = null,
+            cardLastFourDigits = cardLastFourDigits,
+            cancelled = true
+        )
     }
 
     /**
@@ -208,6 +296,100 @@ class SamsungCardParser : CardMessageParser {
     }
 
     /**
+     * 자동결제 문자 파싱
+     *
+     * 형식:
+     * ```
+     * [삼성카드]6518
+     * 자동결제 02/24접수
+     * 아파트관리비
+     * 159,710원
+     * ```
+     */
+    private fun parseAutoPayment(message: String): ParseResult {
+        // 금액 추출
+        val amount = extractAmount(message)
+            ?: return ParseResult.failure("금액을 추출할 수 없습니다")
+
+        // 카드 끝4자리 추출 ([삼성카드]XXXX 또는 삼성XXXX)
+        val cardLastFourDigits = POSTPAID_CARD_PATTERN.find(message)?.groupValues?.get(1)
+            ?: CARD_LAST_FOUR_PATTERN.find(message)?.groupValues?.get(1)
+
+        // 거래 일시 추출 (자동결제 MM/DD접수 → 시간 없이 00:00으로 설정)
+        val transactionDate = extractAutoPaymentDate(message)
+            ?: return ParseResult.failure("거래 일시를 추출할 수 없습니다")
+
+        // 사용처 추출 (자동결제 라인 다음, 금액 라인 이전)
+        val merchantName = extractAutoPaymentMerchantName(message)
+            ?: return ParseResult.failure("사용처를 추출할 수 없습니다")
+
+        return ParseResult.success(
+            amount = amount,
+            transactionDate = transactionDate,
+            merchantName = merchantName,
+            accumulatedAmount = null,  // 자동결제는 누적 사용액 없음
+            cardLastFourDigits = cardLastFourDigits
+        )
+    }
+
+    /**
+     * 자동결제 문자에서 거래 일시를 추출
+     *
+     * "자동결제 02/24접수" 형식에서 월/일을 추출하고,
+     * 시간 정보가 없으므로 00:00으로 설정한다.
+     * 연도는 현재 연도 기준, 6개월 이상 미래이면 작년으로 처리.
+     *
+     * @param message 문자 메시지
+     * @return 거래 일시 (LocalDateTime), 추출 실패 시 null
+     */
+    private fun extractAutoPaymentDate(message: String): LocalDateTime? {
+        val match = AUTO_PAYMENT_DATE_PATTERN.find(message) ?: return null
+
+        return try {
+            val month = match.groupValues[1].toInt()
+            val day = match.groupValues[2].toInt()
+
+            val today = java.time.LocalDate.now()
+            var year = today.year
+            val date = java.time.LocalDate.of(year, month, day)
+
+            // 6개월 이상 미래인 경우에만 작년으로 처리
+            // (며칠~수주 차이의 SMS 지연은 올해로 유지)
+            if (date.isAfter(today.plusMonths(6))) {
+                year -= 1
+            }
+
+            LocalDateTime.of(year, month, day, 0, 0)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 자동결제 문자에서 사용처(가맹점명)를 추출
+     *
+     * "자동결제" 키워드가 포함된 라인 다음, 금액 라인 이전의 텍스트를 사용처로 추출한다.
+     *
+     * @param message 문자 메시지
+     * @return 사용처명, 추출 실패 시 null
+     */
+    private fun extractAutoPaymentMerchantName(message: String): String? {
+        val lines = message.split("\n", "\r\n").map { it.trim() }.filter { it.isNotEmpty() }
+
+        // "자동결제" 라인 찾기
+        val autoPaymentLineIndex = lines.indexOfFirst { it.contains("자동결제") }
+        if (autoPaymentLineIndex == -1) return null
+
+        // 자동결제 라인 다음 줄이 사용처 (금액 라인이 아닌 경우)
+        val nextIndex = autoPaymentLineIndex + 1
+        if (nextIndex < lines.size && !AMOUNT_PATTERN.containsMatchIn(lines[nextIndex])) {
+            return lines[nextIndex]
+        }
+
+        return null
+    }
+
+    /**
      * 문자 메시지에서 결제 금액을 추출
      *
      * "잔여한도", "누적" 뒤의 금액은 제외하고 실제 결제 금액만 추출한다.
@@ -235,7 +417,7 @@ class SamsungCardParser : CardMessageParser {
      * 문자 메시지에서 거래 일시를 추출
      *
      * 문자에는 연도가 포함되지 않으므로 현재 연도를 사용합니다.
-     * 단, 현재 날짜보다 미래인 경우 작년으로 처리합니다.
+     * 단, 6개월 이상 미래인 경우에만 작년으로 처리합니다.
      *
      * @param message 문자 메시지
      * @return 거래 일시 (LocalDateTime), 추출 실패 시 null
@@ -253,8 +435,9 @@ class SamsungCardParser : CardMessageParser {
             var year = today.year
             val date = java.time.LocalDate.of(year, month, day)
 
-            // 미래 날짜인 경우에만 작년으로 처리 (날짜 단위 비교)
-            if (date.isAfter(today)) {
+            // 6개월 이상 미래인 경우에만 작년으로 처리
+            // (며칠~수주 차이의 SMS 지연은 올해로 유지)
+            if (date.isAfter(today.plusMonths(6))) {
                 year -= 1
             }
 

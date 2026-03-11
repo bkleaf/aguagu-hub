@@ -1,5 +1,6 @@
 package com.woo.server.domain.card.controller
 
+import com.woo.server.common.enums.TagType
 import com.woo.server.domain.card.dto.SetMainTagRequest
 import com.woo.server.domain.card.dto.TagRequest
 import com.woo.server.domain.card.dto.TagResponse
@@ -7,6 +8,7 @@ import com.woo.server.domain.card.dto.TransactionTagRequest
 import com.woo.server.domain.card.dto.TransactionTagResponse
 import com.woo.server.domain.card.service.TagService
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -36,11 +38,14 @@ class TagController(
         return ResponseEntity.status(HttpStatus.CREATED).body(result)
     }
 
-    /** 전체 태그를 조회합니다. */
-    @Operation(summary = "전체 태그 조회")
+    /** 태그를 조회합니다 (tagType으로 필터 가능). */
+    @Operation(summary = "태그 조회", description = "전체 태그를 조회합니다. tagType 파라미터로 유형별 필터가 가능합니다.")
     @GetMapping
-    fun getAll(): ResponseEntity<List<TagResponse>> {
-        return ResponseEntity.ok(tagService.getAll())
+    fun getAll(
+        @Parameter(description = "태그 유형 필터 (MAIN/DETAIL, 미지정 시 전체)")
+        @RequestParam(required = false) tagType: TagType?
+    ): ResponseEntity<List<TagResponse>> {
+        return ResponseEntity.ok(tagService.getAll(tagType))
     }
 
     /** 태그를 수정합니다. */
@@ -65,14 +70,14 @@ class TagController(
         }
     }
 
-    /** 거래에 태그를 할당합니다 (tagType: MAIN 또는 DETAIL). */
-    @Operation(summary = "거래에 태그 할당", description = "거래에 태그를 할당합니다. tagType으로 MAIN/DETAIL 구분이 가능합니다.")
+    /** 거래에 태그를 할당합니다. 태그 유형은 태그 자체의 tagType에서 자동 결정됩니다. */
+    @Operation(summary = "거래에 태그 할당", description = "거래에 태그를 할당합니다. 태그 유형은 태그 자체의 tagType에서 자동 결정됩니다.")
     @PostMapping("/transactions/{transactionId}/tags")
     fun addTagToTransaction(
         @PathVariable transactionId: Long,
         @RequestBody request: TransactionTagRequest
     ): ResponseEntity<TransactionTagResponse> {
-        val result = tagService.addTagToTransaction(transactionId, request.tagId, request.tagType)
+        val result = tagService.addTagToTransaction(transactionId, request.tagId)
         return ResponseEntity.status(HttpStatus.CREATED).body(result)
     }
 

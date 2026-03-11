@@ -5,7 +5,12 @@ const api = axios.create({
 })
 
 // 거래 내역 API
-export const fetchTransactions = () => api.get('/transactions')
+export const fetchTransactions = (startDate, endDate) => {
+  const params = {}
+  if (startDate) params.startDate = startDate
+  if (endDate) params.endDate = endDate
+  return api.get('/transactions', { params })
+}
 export const fetchTransaction = (id) => api.get(`/transactions/${id}`)
 export const fetchTransactionsByDate = () => api.get('/transactions/by-date')
 export const fetchTransactionsByCompany = (company) => api.get(`/transactions/by-company/${company}`)
@@ -16,7 +21,12 @@ export const createTransaction = (data) => api.post('/transactions', data)
 export const fetchParseFailures = () => api.get('/transactions/parse-failures')
 
 // 카드 한도 API
-export const fetchLimits = () => api.get('/limits')
+export const fetchLimits = (year, month) => {
+  const params = {}
+  if (year) params.year = year
+  if (month) params.month = month
+  return api.get('/limits', { params })
+}
 export const fetchLimit = (id) => api.get(`/limits/${id}`)
 export const createOrUpdateLimit = (data) => api.post('/limits', data)
 export const deleteLimit = (id) => api.delete(`/limits/${id}`)
@@ -45,11 +55,29 @@ export const updateAutoPayment = (id, data) => api.put(`/auto-payments/${id}`, d
 export const deleteAutoPayment = (id) => api.delete(`/auto-payments/${id}`)
 
 // 태그 API
-export const fetchTags = () => api.get('/tags')
+export const fetchTags = (tagType) => {
+  const params = {}
+  if (tagType) params.tagType = tagType
+  return api.get('/tags', { params })
+}
 export const createTag = (data) => api.post('/tags', data)
 export const updateTag = (id, data) => api.put(`/tags/${id}`, data)
 export const deleteTag = (id) => api.delete(`/tags/${id}`)
 export const fetchTransactionTags = (transactionId) => api.get(`/tags/transactions/${transactionId}/tags`)
-export const addTagToTransaction = (transactionId, tagId, tagType = 'DETAIL') => api.post(`/tags/transactions/${transactionId}/tags`, { tagId, tagType })
+export const addTagToTransaction = (transactionId, tagId) => api.post(`/tags/transactions/${transactionId}/tags`, { tagId })
 export const removeTagFromTransaction = (transactionId, tagId) => api.delete(`/tags/transactions/${transactionId}/tags/${tagId}`)
 export const setMainTag = (transactionId, tagId) => api.put(`/tags/transactions/${transactionId}/main-tag`, { tagId })
+
+// 태그 통계 API
+export const fetchTagStatisticsSummary = (startDate, endDate, tagType) => {
+  const params = { startDate, endDate }
+  if (tagType) params.tagType = tagType
+  return api.get('/tags/statistics/summary', { params })
+}
+export const fetchTagMonthlyTrend = (startDate, endDate, tagType) => {
+  const params = { startDate, endDate }
+  if (tagType) params.tagType = tagType
+  return api.get('/tags/statistics/monthly-trend', { params })
+}
+export const fetchTagUntaggedSummary = (startDate, endDate) => api.get('/tags/statistics/untagged', { params: { startDate, endDate } })
+export const fetchTagAggregate = (startDate, endDate, tagIds) => api.get('/tags/statistics/aggregate', { params: { startDate, endDate, tagIds: tagIds.join(',') } })

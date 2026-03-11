@@ -89,6 +89,30 @@ class CardLimitService(
         }
     }
 
+    /**
+     * 특정 년/월 기준으로 전체 한도를 조회합니다.
+     *
+     * referenceDate를 해당 월의 15일로 설정하여
+     * 해당 월의 정산기간 사용액을 계산합니다.
+     *
+     * @param year 년도
+     * @param month 월
+     * @return 한도 목록 (해당 년/월 기준 사용액 포함)
+     */
+    fun getAllByYearMonth(year: Int, month: Int): List<CardLimitResponse> {
+        val referenceDate = LocalDate.of(year, month, 15)
+        return cardLimitRepository.findAll().map { cardLimit ->
+            val creditCard = findCreditCard(cardLimit.cardCompany, cardLimit.cardLastFourDigits)
+            val creditCardId = creditCard?.id ?: CreditCard.generateId(cardLimit.cardCompany, cardLimit.cardLastFourDigits)
+            val usedAmount = if (creditCard != null) {
+                getUsedAmount(cardLimit, creditCard, referenceDate)
+            } else {
+                getUsedAmountDefault(cardLimit, referenceDate)
+            }
+            CardLimitResponse.from(cardLimit, creditCardId, usedAmount)
+        }
+    }
+
     /** 단건 한도를 조회합니다. */
     fun getById(id: Long): CardLimitResponse? {
         val cardLimit = cardLimitRepository.findById(id).orElse(null) ?: return null
@@ -122,7 +146,7 @@ class CardLimitService(
             calculateBillingPeriod(creditCard.billingStartDay, creditCard.billingEndDay)
         } else {
             val now = YearMonth.now()
-            Pair(now.atDay(1).atStartOfDay(), now.atEndOfMonth().atTime(23, 59, 59))
+            Pair(now.atDay(1).atStartOfDay(), now.atEndOfMonth().atTime(23, 59, 59, 999_999_999))
         }
         val variants = buildCardDigitVariants(cardLastFourDigits)
         return cardTransactionRepository.sumAmountByCardAndPeriodWithVariants(
@@ -180,10 +204,32 @@ class CardLimitService(
     }
 
     /**
+     * 특정 기준일 기준으로 CreditCard 정보와 한도 유형에 따라 기간별 사용액을 조회합니다.
+     */
+    private fun getUsedAmount(cardLimit: CardLimit, creditCard: CreditCard, referenceDate: LocalDate): BigDecimal {
+        val (startDate, endDate) = calculatePeriod(cardLimit, creditCard, referenceDate)
+        val variants = buildCardDigitVariants(creditCard.lastFourDigits)
+        return cardTransactionRepository.sumAmountByCardAndPeriodWithVariants(
+            creditCard.cardCompany, variants, startDate, endDate
+        )
+    }
+
+    /**
      * CreditCard가 없는 경우 한도 유형에 따른 기본 기간으로 사용액을 조회합니다.
      */
     private fun getUsedAmountDefault(cardLimit: CardLimit): BigDecimal {
         val (startDate, endDate) = calculatePeriodDefault(cardLimit)
+        val variants = buildCardDigitVariants(cardLimit.cardLastFourDigits)
+        return cardTransactionRepository.sumAmountByCardAndPeriodWithVariants(
+            cardLimit.cardCompany, variants, startDate, endDate
+        )
+    }
+
+    /**
+     * 특정 기준일 기준으로 CreditCard가 없는 경우 기본 기간으로 사용액을 조회합니다.
+     */
+    private fun getUsedAmountDefault(cardLimit: CardLimit, referenceDate: LocalDate): BigDecimal {
+        val (startDate, endDate) = calculatePeriodDefault(cardLimit, referenceDate)
         val variants = buildCardDigitVariants(cardLimit.cardLastFourDigits)
         return cardTransactionRepository.sumAmountByCardAndPeriodWithVariants(
             cardLimit.cardCompany, variants, startDate, endDate
@@ -206,15 +252,40 @@ class CardLimitService(
     }
 
     /**
+     * 특정 기준일 기준으로 한도 유형에 따라 기간을 계산합니다.
+     */
+    private fun calculatePeriod(cardLimit: CardLimit, creditCard: CreditCard, referenceDate: LocalDate): Pair<LocalDateTime, LocalDateTime> {
+        return when (cardLimit.limitType) {
+            LimitType.MONTHLY -> calculateBillingPeriod(creditCard.billingStartDay, creditCard.billingEndDay, referenceDate)
+            LimitType.YEARLY -> calculateYearlyPeriod(referenceDate.year)
+            LimitType.CUSTOM -> calculateCustomPeriod(cardLimit.customStartDate!!, cardLimit.customEndDate!!)
+        }
+    }
+
+    /**
      * CreditCard가 없을 때 한도 유형에 따라 기본 기간을 계산합니다.
      */
     private fun calculatePeriodDefault(cardLimit: CardLimit): Pair<LocalDateTime, LocalDateTime> {
         return when (cardLimit.limitType) {
             LimitType.MONTHLY -> {
                 val now = YearMonth.now()
-                Pair(now.atDay(1).atStartOfDay(), now.atEndOfMonth().atTime(23, 59, 59))
+                Pair(now.atDay(1).atStartOfDay(), now.atEndOfMonth().atTime(23, 59, 59, 999_999_999))
             }
             LimitType.YEARLY -> calculateYearlyPeriod()
+            LimitType.CUSTOM -> calculateCustomPeriod(cardLimit.customStartDate!!, cardLimit.customEndDate!!)
+        }
+    }
+
+    /**
+     * 특정 기준일 기준으로 CreditCard가 없을 때 기본 기간을 계산합니다.
+     */
+    private fun calculatePeriodDefault(cardLimit: CardLimit, referenceDate: LocalDate): Pair<LocalDateTime, LocalDateTime> {
+        return when (cardLimit.limitType) {
+            LimitType.MONTHLY -> {
+                val ym = YearMonth.from(referenceDate)
+                Pair(ym.atDay(1).atStartOfDay(), ym.atEndOfMonth().atTime(23, 59, 59, 999_999_999))
+            }
+            LimitType.YEARLY -> calculateYearlyPeriod(referenceDate.year)
             LimitType.CUSTOM -> calculateCustomPeriod(cardLimit.customStartDate!!, cardLimit.customEndDate!!)
         }
     }
@@ -224,13 +295,21 @@ class CardLimitService(
         val year = LocalDate.now().year
         return Pair(
             LocalDate.of(year, 1, 1).atStartOfDay(),
-            LocalDate.of(year, 12, 31).atTime(23, 59, 59)
+            LocalDate.of(year, 12, 31).atTime(23, 59, 59, 999_999_999)
+        )
+    }
+
+    /** 특정 년도의 연간 기간을 계산합니다. */
+    private fun calculateYearlyPeriod(year: Int): Pair<LocalDateTime, LocalDateTime> {
+        return Pair(
+            LocalDate.of(year, 1, 1).atStartOfDay(),
+            LocalDate.of(year, 12, 31).atTime(23, 59, 59, 999_999_999)
         )
     }
 
     /** 커스텀 기간을 계산합니다. */
     private fun calculateCustomPeriod(startDate: LocalDate, endDate: LocalDate): Pair<LocalDateTime, LocalDateTime> {
-        return Pair(startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+        return Pair(startDate.atStartOfDay(), endDate.atTime(23, 59, 59, 999_999_999))
     }
 
     /**
@@ -241,13 +320,24 @@ class CardLimitService(
      *   → 오늘이 1/10이면: 12/15 ~ 1/14
      */
     internal fun calculateBillingPeriod(billingStartDay: Int, billingEndDay: Int): Pair<LocalDateTime, LocalDateTime> {
-        val today = LocalDate.now()
+        return calculateBillingPeriod(billingStartDay, billingEndDay, LocalDate.now())
+    }
+
+    /**
+     * 특정 기준일 기준으로 정산 기간을 계산합니다.
+     *
+     * @param billingStartDay 정산 시작일
+     * @param billingEndDay 정산 종료일
+     * @param referenceDate 기준일
+     */
+    internal fun calculateBillingPeriod(billingStartDay: Int, billingEndDay: Int, referenceDate: LocalDate): Pair<LocalDateTime, LocalDateTime> {
+        val today = referenceDate
 
         if (billingStartDay == 1 && billingEndDay == 31) {
-            val yearMonth = YearMonth.now()
+            val yearMonth = YearMonth.from(today)
             return Pair(
                 yearMonth.atDay(1).atStartOfDay(),
-                yearMonth.atEndOfMonth().atTime(23, 59, 59)
+                yearMonth.atEndOfMonth().atTime(23, 59, 59, 999_999_999)
             )
         }
 
@@ -278,7 +368,7 @@ class CardLimitService(
             }
         }
 
-        return Pair(startDate.atStartOfDay(), endDate.atTime(23, 59, 59))
+        return Pair(startDate.atStartOfDay(), endDate.atTime(23, 59, 59, 999_999_999))
     }
 
     /** CreditCard를 카드사+끝4자리로 조회합니다. */

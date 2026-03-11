@@ -7,11 +7,14 @@ import com.woo.server.domain.card.dto.CardParseFailureResponse
 import com.woo.server.domain.card.dto.CardTransactionResponse
 import com.woo.server.domain.card.service.CardTransactionService
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import java.time.LocalDate
 
 @Tag(name = "카드 거래", description = "카드 결제 문자 수신 및 거래 내역 조회 API")
 @RestController
@@ -31,10 +34,19 @@ class CardTransactionController(
         return ResponseEntity.status(status).body(result)
     }
 
-    @Operation(summary = "전체 거래 내역 조회")
+    @Operation(summary = "전체 거래 내역 조회", description = "startDate, endDate를 지정하면 해당 기간의 거래를 조회합니다. 미지정 시 전체 조회.")
     @GetMapping
-    fun getAllTransactions(): ResponseEntity<List<CardTransactionResponse>> {
-        val transactions = cardTransactionService.getAllTransactions()
+    fun getAllTransactions(
+        @Parameter(description = "조회 시작일 (yyyy-MM-dd)")
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate?,
+        @Parameter(description = "조회 종료일 (yyyy-MM-dd)")
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate?
+    ): ResponseEntity<List<CardTransactionResponse>> {
+        val transactions = if (startDate != null && endDate != null) {
+            cardTransactionService.getTransactionsByDateRange(startDate, endDate)
+        } else {
+            cardTransactionService.getAllTransactions()
+        }
         return ResponseEntity.ok(transactions)
     }
 

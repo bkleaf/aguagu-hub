@@ -242,14 +242,15 @@ class HanaCardParser : CardMessageParser {
     /**
      * 연도 없는 날짜/시간 정보로 LocalDateTime 생성
      *
-     * 현재 연도를 사용하며, 미래 월인 경우에만 작년으로 처리한다.
-     * (같은 날 몇 분 차이로 작년으로 밀리는 문제 방지를 위해 날짜 단위로 비교)
+     * 현재 연도를 사용하며, 6개월 이상 미래인 경우에만 작년으로 처리한다.
+     * (며칠~수주 차이의 SMS 지연은 올해로 유지)
      */
     private fun buildDateTime(month: Int, day: Int, hour: Int, minute: Int): LocalDateTime {
         val today = java.time.LocalDate.now()
         var year = today.year
         val date = java.time.LocalDate.of(year, month, day)
-        if (date.isAfter(today)) {
+        // 6개월 이상 미래인 경우에만 작년으로 처리
+        if (date.isAfter(today.plusMonths(6))) {
             year -= 1
         }
         return LocalDateTime.of(year, month, day, hour, minute)
