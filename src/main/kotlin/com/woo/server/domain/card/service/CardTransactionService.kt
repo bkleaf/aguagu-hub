@@ -275,9 +275,12 @@ class CardTransactionService(
         }
     }
 
-    /** 현재 지원하는 카드사 목록을 조회합니다. */
+    /** 현재 지원하는 카드사 목록을 조회합니다 (거래 파서 + 청구서 파서 포함). */
     fun getSupportedCardCompanies(): List<CardCompany> {
-        return cardParserFactory.getSupportedCardCompanies()
+        val transactionCompanies = cardParserFactory.getSupportedCardCompanies()
+        val billCompanies = CardCompany.entries
+            .filter { it.billingPhoneNumber.isNotEmpty() }
+        return (transactionCompanies + billCompanies).distinct()
     }
 
     /**

@@ -6,8 +6,10 @@ import com.woo.server.domain.card.dto.CardMonthlyBillListResponse
 import com.woo.server.domain.card.dto.CardMonthlyBillProcessResponse
 import com.woo.server.domain.card.dto.CardMonthlyBillResponse
 import com.woo.server.domain.card.entity.CardMonthlyBill
+import com.woo.server.domain.card.entity.CardParseFailure
 import com.woo.server.domain.card.parser.BillParserFactory
 import com.woo.server.domain.card.repository.CardMonthlyBillRepository
+import com.woo.server.domain.card.repository.CardParseFailureRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,6 +24,7 @@ import java.time.LocalDate
 @Transactional(readOnly = true)
 class CardMonthlyBillService(
     private val cardMonthlyBillRepository: CardMonthlyBillRepository,
+    private val cardParseFailureRepository: CardParseFailureRepository,
     private val billParserFactory: BillParserFactory,
     private val telegramNotificationService: TelegramNotificationService
 ) {
@@ -53,6 +56,20 @@ class CardMonthlyBillService(
 
         if (!parseResult.success) {
             log.warn("청구서 파싱 실패: ${parseResult.failReason}")
+            // 파싱 실패 테이블에 저장
+            val failure = CardParseFailure(
+                phoneNumber = phoneNumber,
+                cardCompany = cardCompany,
+                rawMessage = message,
+                failReason = parseResult.failReason ?: "알 수 없는 오류"
+            )
+            val savedFailure = cardParseFailureRepository.save(failure)
+            // 텔레그램 파싱 실패 알림 전송
+            try {
+                telegramNotificationService.notifyParseFailure(savedFailure)
+            } catch (e: Exception) {
+                log.error("텔레그램 알림 실패", e)
+            }
             return CardMonthlyBillProcessResponse.parseFailed(parseResult.failReason ?: "알 수 없는 오류")
         }
 

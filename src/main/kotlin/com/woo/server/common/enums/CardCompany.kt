@@ -20,7 +20,7 @@ enum class CardCompany(
     SAMSUNG("삼성카드", listOf("삼성", "SAMSUNG"), "15881000", "15888700"),
 
     /** 현대카드 */
-    HYUNDAI("현대카드", listOf("현대", "HYUNDAI"), "15772100"),
+    HYUNDAI("현대카드", listOf("현대", "HYUNDAI"), "15772100", "15776000"),
 
     /** KB국민카드 */
     KB("KB국민카드", listOf("KB", "국민"), "15881688", "18990800"),

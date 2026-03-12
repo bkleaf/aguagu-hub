@@ -1,10 +1,28 @@
-### 삼성카드 월별 청구서 등록 (기존 거래 엔드포인트로 자동 라우팅)
+### 삼성카드 월별 청구서 등록 - 간략형 (기존 거래 엔드포인트로 자동 라우팅)
 POST {{host}}/api/v1/card/transactions
 Content-Type: application/json
 
 {
   "phoneNumber": "15888700",
   "message": "2/25 결제금액 150,000원 (2/10기준)"
+}
+
+### 삼성카드 월별 청구서 등록 - 출금일 포함형
+POST {{host}}/api/v1/card/transactions
+Content-Type: application/json
+
+{
+  "phoneNumber": "15888700",
+  "message": "[Web발신]\n[삼성카드]03/13결제금액 2,622,403원 (03/13출금,03/05기준) q.scqr.kr/vJklSO6"
+}
+
+### 현대카드 월별 청구서 등록
+POST {{host}}/api/v1/card/transactions
+Content-Type: application/json
+
+{
+  "phoneNumber": "15776000",
+  "message": "[Web발신]\n[현대카드] 전*우님 03/12 결제금액 9,134원(03/02기준) 신한은행 h7.is/앱명세서"
 }
 
 ### 하나카드 월별 청구서 등록
